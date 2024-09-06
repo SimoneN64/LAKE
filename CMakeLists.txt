@@ -1,14 +1,15 @@
-﻿# CMakeList.txt: progetto CMake per Saleae Logic KLine Extractor. Includere l'origine e definire
-# qui la logica specifica del progetto.
-#
-cmake_minimum_required(VERSION 3.20)
+﻿cmake_minimum_required(VERSION 3.20)
 
-project("Saleae Logic KLine Extractor")
+project(lake)
 
-find_package(fmt CONFIG REQUIRED)
+option(BUILD_SHARED_LIBS OFF)
 
-# Aggiungere l'origine all'eseguibile di questo progetto.
-add_executable(CMakeTarget src/main.cpp)
+add_subdirectory(external/imgui imgui)
+add_subdirectory(external/fmt fmt)
+add_subdirectory(external/SDL SDL)
 
-target_link_libraries(CMakeTarget PRIVATE fmt::fmt)
-set_property(TARGET CMakeTarget PROPERTY CXX_STANDARD 20)
+add_executable(lake src/main.cpp)
+
+target_include_directories(lake PRIVATE external/imgui external/imgui/backends)
+target_link_libraries(lake PRIVATE fmt::fmt SDL3::SDL3 SDL3::SDL3-static imgui)
+set_property(TARGET lake PROPERTY CXX_STANDARD 20)

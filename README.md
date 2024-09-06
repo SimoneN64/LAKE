@@ -1,1 +1,1 @@
-# Logic KLine Extractor
+# LAKE (Logic Analyzer K-line Extractor)

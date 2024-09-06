@@ -1,6 +1,7 @@
 ﻿#include <cstdint>
 #include <fmt/core.h>
 #include <fstream>
+#include <imgui.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -86,31 +87,12 @@ CommunicationMode StrToCommMode(const std::string &param) {
   return INVALID;
 }
 
-int main(int argc, char **argv) {
-  if (argc < 2) {
-    return -1;
-  }
-
-  if (argc >= 3) {
-    commMode = StrToCommMode(argv[2]);
-    if (commMode == INVALID) {
-      fmt::print("Inexistent communication mode. Available options "
-                 "are:\n\t{}\n\t{}\n\t{}\n\t{}\n\t{}\n\t{}\n\t{}\n\t{}\n\t{}"
-                 "\n\t{}\n\t{}",
-                 "KSTDLUNGO", "KSTDCORTO", "KLUNGO_EXLEN", "KCORTOZERO",
-                 "KLUNGOBMW", "KSTD686A", "KSTD33F1", "KLUNGO_LEN",
-                 "KLUNGO_BENCH", "KCORTO_BENCH", "KLUNGO_EDC15");
-      return -2;
-    }
-  }
-
-  std::ofstream output("out.txt");
-  std::ifstream inputFile(argv[1]);
+void ParseFile(std::ifstream &inputFile) {
   std::vector<std::string> input{};
   std::string lineFile;
 
   std::getline(inputFile, lineFile); // skippa prima riga "Time [s],Value,Parity
-                                     // Error,Framing Error"
+  // Error,Framing Error"
 
   while (std::getline(inputFile, lineFile)) {
     input.push_back(lineFile);
@@ -118,10 +100,10 @@ int main(int argc, char **argv) {
 
   LineData previousData;
 
-  output << fmt::format("{:^24}|{:^24}|{:^12}|{:^6}|{:^8}|{:^24}\n",
+  /*output << fmt::format("{:^24}|{:^24}|{:^12}|{:^6}|{:^8}|{:^24}\n",
                         "Absolute Time (s)", "Delta Time (s)", "Identifier",
                         "Length", "Checksum", "Data");
-
+  */
   for (size_t i = 0; i < input.size();) {
     LineData data;
     data.SetAbsTime(input[i]);
@@ -158,15 +140,16 @@ int main(int argc, char **argv) {
 
     data.SetCks(input[i++]);
 
-    output << fmt::format("{:<24}|{:<24}|{:<12}|{:<6}|{:<8}|{:<24}\n",
+    /* output << fmt::format("{:<24}|{:<24}|{:<12}|{:<6}|{:<8}|{:<24}\n",
                           data.absTime, data.deltaTime,
                           fmt::format("{:02X}", data.identifier),
                           fmt::format("{:02X}", data.len),
                           fmt::format("{:02X}", data.cks), dataStr);
-
+    */
     previousData = data;
   }
 
-  output.close();
-  return 0;
+  // output.close();
 }
+
+int main() { return 0; }
