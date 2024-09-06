@@ -193,6 +193,8 @@ int main() {
 
   // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
   // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+  io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
   auto firaMonoRegular = io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", 16.f);
   auto firaMonoBold = io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", 16.f);
@@ -250,7 +252,7 @@ int main() {
       ImGui::EndMainMenuBar();
 
       ImGui::SetNextWindowSize(ImGui::GetCursorScreenPos());
-      ImGui::Begin("Main view", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
+      ImGui::Begin("Main view", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDecoration);
       {
         ImGui::PushFont(firaMonoBold);
         if (ImGui::BeginChild("#absTime")) {
