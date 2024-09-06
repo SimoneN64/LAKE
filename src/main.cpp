@@ -1,5 +1,4 @@
-﻿#include <array>
-#include <cstdint>
+﻿#include <cstdint>
 #include <fmt/core.h>
 #include <fstream>
 #include <iostream>
