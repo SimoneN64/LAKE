@@ -7,10 +7,11 @@
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
+#include <imgui_internal.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_opengl.h>
 
-enum CommunicationMode {
+enum class CommunicationMode {
   KSTDLUNGO,
   KSTDCORTO,
   KLUNGO_EXLEN,
@@ -26,7 +27,7 @@ enum CommunicationMode {
   COMM_COUNT
 };
 
-CommunicationMode commMode = KSTDLUNGO;
+CommunicationMode commMode = CommunicationMode::KSTDLUNGO;
 
 struct LineData {
   void SetAbsTime(const std::string &line) { absTime = GetTime(line); }
@@ -36,10 +37,10 @@ struct LineData {
   void SetIdentifier(const std::string &line) { identifier = GetDataByte(line); }
 
   void SetLen(const std::string &line) {
-    if (commMode == KSTDLUNGO) {
+    if (commMode == CommunicationMode::KSTDLUNGO) {
       auto val = GetDataByte(line);
       len = val - (val > 0xf ? 0x80 : 0);
-    } else if (commMode == KLUNGO_EXLEN) {
+    } else if (commMode == CommunicationMode::KLUNGO_EXLEN) {
       len = GetDataByte(line);
     }
   }
@@ -60,29 +61,29 @@ struct LineData {
 
 CommunicationMode StrToCommMode(const std::string &param) {
   if (param == "KSTDLUNGO")
-    return KSTDLUNGO;
+    return CommunicationMode::KSTDLUNGO;
   if (param == "KSTDCORTO")
-    return KSTDCORTO;
+    return CommunicationMode::KSTDCORTO;
   if (param == "KLUNGO_EXLEN")
-    return KLUNGO_EXLEN;
+    return CommunicationMode::KLUNGO_EXLEN;
   if (param == "KCORTOZERO")
-    return KCORTOZERO;
+    return CommunicationMode::KCORTOZERO;
   if (param == "KLUNGOBMW")
-    return KLUNGOBMW;
+    return CommunicationMode::KLUNGOBMW;
   if (param == "KSTD686A")
-    return KSTD686A;
+    return CommunicationMode::KSTD686A;
   if (param == "KSTD33F1")
-    return KSTD33F1;
+    return CommunicationMode::KSTD33F1;
   if (param == "KLUNGO_LEN")
-    return KLUNGO_LEN;
+    return CommunicationMode::KLUNGO_LEN;
   if (param == "KLUNGO_BENCH")
-    return KLUNGO_BENCH;
+    return CommunicationMode::KLUNGO_BENCH;
   if (param == "KCORTO_BENCH")
-    return KCORTO_BENCH;
+    return CommunicationMode::KCORTO_BENCH;
   if (param == "KLUNGO_EDC15")
-    return KLUNGO_EDC15;
+    return CommunicationMode::KLUNGO_EDC15;
 
-  return INVALID;
+  return CommunicationMode::INVALID;
 }
 
 void ParseFile(std::ifstream &inputFile) {
@@ -106,17 +107,17 @@ void ParseFile(std::ifstream &inputFile) {
     LineData data;
     data.SetAbsTime(input[i]);
     data.SetDeltaTime(previousData.absTime == 0 ? 0 : data.absTime - previousData.absTime);
-    if (commMode == KSTDLUNGO) {
+    if (commMode == CommunicationMode::KSTDLUNGO) {
       data.SetLen(input[i]);
     }
     i += 2;
     data.SetIdentifier(input[i]);
 
-    if (commMode == KLUNGO_EXLEN) {
+    if (commMode == CommunicationMode::KLUNGO_EXLEN) {
       data.SetLen(input[++i]);
     }
 
-    if (commMode == KSTDLUNGO && data.len == 0) {
+    if (commMode == CommunicationMode::KSTDLUNGO && data.len == 0) {
       data.len = data.GetDataByte(input[++i]);
     }
 
@@ -149,4 +150,97 @@ void ParseFile(std::ifstream &inputFile) {
   // output.close();
 }
 
-int main() { return 0; }
+enum ErrorCodes {
+  eError_None,
+  eError_VideoSystemFailure,
+};
+
+int main() {
+  if (!SDL_Init(SDL_INIT_VIDEO)) {
+    fmt::print("Could not initialize video system! (SDL error: {})\n", SDL_GetError());
+    return eError_VideoSystemFailure;
+  }
+
+  SDL_Window *window = SDL_CreateWindow(
+    "LAKE", 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+
+  if (window == nullptr) {
+    fmt::print("Could not initialize window! (SDL error: {})\n", SDL_GetError());
+    return eError_VideoSystemFailure;
+  }
+
+  SDL_Renderer *renderer = SDL_CreateRenderer(window, nullptr);
+  if (renderer == nullptr) {
+    fmt::print("Could not initialize renderer! (SDL error: {})\n", SDL_GetError());
+    return eError_VideoSystemFailure;
+  }
+
+  if (!SDL_SetRenderVSync(renderer, SDL_WINDOW_SURFACE_VSYNC_ADAPTIVE)) {
+    fmt::print("Adaptive VSync not available. Falling back to frame-swapping\n");
+    SDL_SetRenderVSync(renderer, true);
+  }
+
+  SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+  SDL_ShowWindow(window);
+
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO &io = ImGui::GetIO();
+  (void)io;
+
+  // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+  // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+  ImGui::StyleColorsDark();
+
+  ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
+  ImGui_ImplSDLRenderer3_Init(renderer);
+
+  bool done = false;
+
+  while (!done) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      ImGui_ImplSDL3_ProcessEvent(&event);
+      if (event.type == SDL_EVENT_QUIT)
+        done = true;
+      if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
+        done = true;
+    }
+
+    if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED) {
+      SDL_Delay(10);
+      continue;
+    }
+
+    ImGui_ImplSDLRenderer3_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
+    if (ImGui::BeginMainMenuBar()) {
+      if (ImGui::BeginMenu("File")) {
+        if (ImGui::MenuItem("Open")) {
+        }
+
+        done = ImGui::MenuItem("Exit");
+      }
+      ImGui::EndMainMenuBar();
+    }
+
+    ImGui::Render();
+    SDL_SetRenderDrawColorFloat(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+    SDL_RenderPresent(renderer);
+  }
+
+  // Cleanup
+  ImGui_ImplSDLRenderer3_Shutdown();
+  ImGui_ImplSDL3_Shutdown();
+  ImGui::DestroyContext();
+
+  SDL_DestroyRenderer(renderer);
+  SDL_DestroyWindow(window);
+  SDL_Quit();
+  return eError_None;
+}
