@@ -10,6 +10,7 @@
 #include <imgui_internal.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_opengl.h>
+#include <nfd.hpp>
 
 enum class CommunicationMode {
   KSTDLUNGO,
@@ -183,6 +184,8 @@ int main() {
   SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
   SDL_ShowWindow(window);
 
+  NFD::Init();
+
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
@@ -191,12 +194,15 @@ int main() {
   // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
   // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
+  auto firaMonoRegular = io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", 16.f);
+  auto firaMonoBold = io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", 16.f);
   ImGui::StyleColorsDark();
 
   ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
   ImGui_ImplSDLRenderer3_Init(renderer);
 
   bool done = false;
+  std::ifstream inputFile;
 
   while (!done) {
     SDL_Event event;
@@ -206,6 +212,9 @@ int main() {
         done = true;
       if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
         done = true;
+      if (event.type == SDL_EVENT_DROP_FILE && event.drop.windowID == SDL_GetWindowID(window)) {
+        inputFile.open(event.drop.data);
+      }
     }
 
     if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED) {
@@ -217,22 +226,54 @@ int main() {
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    if (ImGui::BeginMainMenuBar()) {
+    {
+      float mainMenuBarHeight;
+      ImGui::BeginMainMenuBar();
+      mainMenuBarHeight = ImGui::GetWindowSize().y;
       if (ImGui::BeginMenu("File")) {
         if (ImGui::MenuItem("Open")) {
+          nfdu8char_t *outPath;
+          nfdu8filteritem_t filters[2] = {{"Saleae/DSLogic TXT file", "txt"}, {"Saleae/DSLogic CSV file", "csv"}};
+          nfdopendialogu8args_t args = {0};
+          args.filterList = filters;
+          args.filterCount = 2;
+          nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
+          if (result == NFD_OKAY) {
+            inputFile.open(outPath);
+            NFD_FreePathU8(outPath);
+          }
         }
 
         done = ImGui::MenuItem("Exit");
+        ImGui::EndMenu();
       }
       ImGui::EndMainMenuBar();
-    }
 
+      ImGui::SetNextWindowSize(ImGui::GetCursorScreenPos());
+      ImGui::Begin("Main view", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
+      {
+        ImGui::PushFont(firaMonoBold);
+        if (ImGui::BeginChild("#absTime")) {
+          ImGui::Text("Test");
+          ImGui::EndChild();
+        }
+        ImGui::SameLine();
+        if (ImGui::BeginChild("#deltaTime")) {
+          ImGui::Text("Test");
+          ImGui::EndChild();
+        }
+        ImGui::PopFont();
+      }
+      ImGui::End();
+    }
     ImGui::Render();
     SDL_SetRenderDrawColorFloat(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
     SDL_RenderPresent(renderer);
   }
+
+  inputFile.close();
 
   // Cleanup
   ImGui_ImplSDLRenderer3_Shutdown();
@@ -242,5 +283,7 @@ int main() {
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
+
+  NFD::Quit();
   return eError_None;
 }
