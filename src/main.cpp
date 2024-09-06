@@ -1,10 +1,14 @@
 ﻿#include <cstdint>
 #include <fmt/core.h>
 #include <fstream>
-#include <imgui.h>
 #include <iostream>
 #include <string>
 #include <vector>
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_sdlrenderer3.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_opengl.h>
 
 enum CommunicationMode {
   KSTDLUNGO,
@@ -29,9 +33,7 @@ struct LineData {
 
   void SetDeltaTime(const double &val) { deltaTime = val; }
 
-  void SetIdentifier(const std::string &line) {
-    identifier = GetDataByte(line);
-  }
+  void SetIdentifier(const std::string &line) { identifier = GetDataByte(line); }
 
   void SetLen(const std::string &line) {
     if (commMode == KSTDLUNGO) {
@@ -44,15 +46,11 @@ struct LineData {
 
   void SetCks(const std::string &line) { cks = GetDataByte(line); }
 
-  double GetTime(const std::string &line) {
-    return std::stod(line.substr(0, line.find_first_of(',')));
-  }
+  double GetTime(const std::string &line) { return std::stod(line.substr(0, line.find_first_of(','))); }
 
   uint8_t GetDataByte(const std::string &line) {
-    return std::stoi(
-        line.substr(line.find_first_of(',') + 1,
-                    line.find_first_of(',', line.find_first_of(',') + 1)),
-        nullptr, 16);
+    return std::stoi(line.substr(line.find_first_of(',') + 1, line.find_first_of(',', line.find_first_of(',') + 1)),
+                     nullptr, 16);
   }
 
   std::vector<uint8_t> bytes{};
@@ -107,8 +105,7 @@ void ParseFile(std::ifstream &inputFile) {
   for (size_t i = 0; i < input.size();) {
     LineData data;
     data.SetAbsTime(input[i]);
-    data.SetDeltaTime(
-        previousData.absTime == 0 ? 0 : data.absTime - previousData.absTime);
+    data.SetDeltaTime(previousData.absTime == 0 ? 0 : data.absTime - previousData.absTime);
     if (commMode == KSTDLUNGO) {
       data.SetLen(input[i]);
     }
