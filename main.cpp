@@ -6,6 +6,22 @@
 #include <vector>
 #include <fmt/core.h>
 
+enum CommunicationMode {
+	KSTDLUNGO,
+	KSTDCORTO,
+	KLUNGO_EXLEN,
+	KCORTOZERO,
+	KLUNGOBMW,
+	KSTD686A,
+	KSTD33F1,
+	KLUNGO_LEN,
+	KLUNGO_BENCH,
+	KCORTO_BENCH,
+	KLUNGO_EDC15,
+};
+
+CommunicationMode commMode = KSTDLUNGO;
+
 struct LineData {
 	void SetAbsTime(const std::string& line) {
 		absTime = GetTime(line);
@@ -20,7 +36,13 @@ struct LineData {
 	}
 
 	void SetLen(const std::string& line) {
-		len = GetDataByte(line) & 0x7f;
+		if (commMode == KSTDLUNGO) {
+			auto val = GetDataByte(line);
+			len = val - (val > 0xf ? 0x80 : 0);
+		}
+		else if (commMode == KLUNGO_EXLEN) {
+			len = GetDataByte(line);
+		}
 	}
 
 	void SetCks(const std::string& line) {
@@ -40,9 +62,44 @@ struct LineData {
 	uint8_t identifier{}, len{}, cks{};
 };
 
+CommunicationMode StrToCommMode(const std::string& param) {
+	if (param == "KSTDLUNGO")		 return KSTDLUNGO;
+	if (param == "KSTDCORTO")		 return KSTDCORTO;
+	if (param == "KLUNGO_EXLEN") return KLUNGO_EXLEN;
+	if (param == "KCORTOZERO")	 return KCORTOZERO;
+	if (param == "KLUNGOBMW")		 return KLUNGOBMW;
+	if (param == "KSTD686A")		 return KSTD686A;
+	if (param == "KSTD33F1")		 return KSTD33F1;
+	if (param == "KLUNGO_LEN")	 return KLUNGO_LEN;
+	if (param == "KLUNGO_BENCH") return KLUNGO_BENCH;
+	if (param == "KCORTO_BENCH") return KCORTO_BENCH;
+	if (param == "KLUNGO_EDC15") return KLUNGO_EDC15;
+	
+	return CommunicationMode (-1);
+}
+
 int main(int argc, char** argv) {
 	if (argc < 2) {
 		return -1;
+	}
+
+	if (argc >= 3) {
+		commMode = StrToCommMode(argv[2]);
+		if (commMode == -1) {
+			fmt::print("Inexistent communication mode. Available options are:\n\t{}\n\t{}\n\t{}\n\t{}\n\t{}\n\t{}\n\t{}\n\t{}\n\t{}\n\t{}\n\t{}",
+									"KSTDLUNGO",
+									"KSTDCORTO",
+									"KLUNGO_EXLEN",
+									"KCORTOZERO",
+									"KLUNGOBMW",
+									"KSTD686A",
+									"KSTD33F1",
+									"KLUNGO_LEN",
+									"KLUNGO_BENCH",
+									"KCORTO_BENCH",
+									"KLUNGO_EDC15");
+			return -2;
+		}
 	}
 
 	std::ofstream output("out.txt");
@@ -64,13 +121,18 @@ int main(int argc, char** argv) {
 		LineData data;
 		data.SetAbsTime(input[i]);
 		data.SetDeltaTime(previousData.absTime == 0 ? 0 : data.absTime - previousData.absTime);
-		data.SetLen(input[i]);
+		if (commMode == KSTDLUNGO) {
+			data.SetLen(input[i]);
+		}
 		i+=2;
 		data.SetIdentifier(input[i]);
 		
-		if (data.len == 0) {
-			i++;
-			data.SetLen(input[i]);
+		if (commMode == KLUNGO_EXLEN) {
+			data.SetLen(input[++i]);
+		}
+
+		if (commMode == KSTDLUNGO && data.len == 0) {
+			data.len = data.GetDataByte(input[++i]);
 		}
 
 		i++;
