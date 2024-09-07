@@ -159,7 +159,8 @@ enum ErrorCodes {
 template <class... Args>
 void DisplayErrorPopup(const char *fmt, Args... args) {
   ImGui::PushStyleColor(ImGuiCol_Text, 0xFF5D67);
-  if (ImGui::BeginPopup("An error occurred")) {
+  ImGui::OpenPopup("An error occurred");
+  if (ImGui::BeginPopupModal("An error occurred", nullptr)) {
     ImGui::PopStyleColor();
     ImGui::Text(fmt, args...);
     ImGui::EndPopup();
@@ -274,8 +275,9 @@ int main() {
       ImGui::SetNextWindowSize({static_cast<float>(windowW), static_cast<float>(windowH)});
       if (ImGui::Begin("Main view", nullptr,
                        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
-                         ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDecoration)) {
-        static bool openedSettings;
+                         ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDecoration |
+                         ImGuiWindowFlags_NoScrollWithMouse)) {
+        static bool openSettings = false;
         if (ImGui::BeginMenuBar()) {
           if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Open")) {
@@ -287,18 +289,24 @@ int main() {
           }
 
           if (ImGui::BeginMenu("Options")) {
-            openedSettings = ImGui::MenuItem("Settings");
+            if (ImGui::MenuItem("Settings")) {
+              openSettings = true;
+            }
             ImGui::EndMenu();
           }
           ImGui::EndMenuBar();
         }
 
-        if (openedSettings) {
-          ImGui::BeginChild("##settings");
-          if (ImGui::CloseButton(ImGui::GetID("#CLOSE"), {ImGui::GetWindowSize().x - 40, 40})) {
-            openedSettings = false;
-          }
+        if (ImGui::BeginPopup("Test")) {
+          ImGui::Text("Ciao ciao");
+          ImGui::EndPopup();
+        }
 
+        if (openSettings) {
+          ImGui::OpenPopup("##settings");
+        }
+
+        if (ImGui::BeginPopupModal("##settings", &openSettings)) {
           ImGui::Text("Style:");
           ImGui::SameLine(0, 2);
           if (ImGui::RadioButton("Dark", themeDark)) {
@@ -313,6 +321,24 @@ int main() {
             ImGui::StyleColorsLight();
           }
 
+          ImGui::EndPopup();
+        }
+
+        ImGui::SetNextWindowSizeConstraints({float(windowW) / 4, float(windowH)},
+                                            {float(windowW) * 0.75f, float(windowH)});
+        if (ImGui::BeginChild("KLine Messages", {}, ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders)) {
+          for (int i = 0; i < 100; i++) {
+            ImGui::Text("Lorem ipsum");
+          }
+          ImGui::EndChild();
+        }
+
+        ImGui::SameLine();
+
+        ImGui::SetNextWindowSizeConstraints({float(windowW) / 4, float(windowH)},
+                                            {float(windowW) * 0.75f, float(windowH)});
+        if (ImGui::BeginChild("Graph View")) {
+          ImGui::Text("Lorem ipsum");
           ImGui::EndChild();
         }
 
