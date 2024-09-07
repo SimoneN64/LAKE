@@ -10,7 +10,7 @@
 #include <imgui_internal.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_opengl.h>
-#include <nfd.hpp>
+#include <FileHelper.hpp>
 
 enum class CommunicationMode {
   KSTDLUNGO,
@@ -156,6 +156,45 @@ enum ErrorCodes {
   eError_VideoSystemFailure,
 };
 
+template <class... Args>
+void DisplayErrorPopup(const char *fmt, Args... args) {
+  ImGui::PushStyleColor(ImGuiCol_Text, 0xFF5D67);
+  if (ImGui::BeginPopup("An error occurred")) {
+    ImGui::PopStyleColor();
+    ImGui::Text(fmt, args...);
+    ImGui::EndPopup();
+  } else {
+    ImGui::PopStyleColor();
+  }
+}
+
+struct LogicViewArea {
+  void OpenDialog() {
+    fs::path resultPath;
+    if (!Helpers::FileDialog::Get().OpenDialog(resultPath) &&
+        Helpers::FileDialog::Get().GetErrorState() == Helpers::FileDialog::Error) {
+      DisplayErrorPopup(Helpers::FileDialog::Get().GetError().c_str());
+    } else {
+      OpenFile(resultPath);
+    }
+  }
+
+  void OpenFile(const fs::path &path) {
+    csv.open(path);
+    if (!csv.good() || !csv.is_open()) {
+      DisplayErrorPopup("Could not open %s\n", csvPath.c_str());
+    }
+
+    csvPath = path;
+    couldOpenCsv = true;
+  }
+
+private:
+  bool couldOpenCsv = false;
+  std::ifstream csv;
+  fs::path csvPath;
+};
+
 int main() {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     fmt::print("Could not initialize video system! (SDL error: {})\n", SDL_GetError());
@@ -184,8 +223,6 @@ int main() {
   SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
   SDL_ShowWindow(window);
 
-  NFD::Init();
-
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
@@ -194,7 +231,10 @@ int main() {
   // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
   // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-  io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+  ImGuiStyle &style = ImGui::GetStyle();
+  style.WindowRounding = 0.0f;
+  style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 
   auto firaMonoRegular = io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", 16.f);
   auto firaMonoBold = io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", 16.f);
@@ -204,9 +244,11 @@ int main() {
   ImGui_ImplSDLRenderer3_Init(renderer);
 
   bool done = false;
-  std::ifstream inputFile;
+  bool themeDark = true;
+  LogicViewArea logicViewArea;
 
   while (!done) {
+    int windowW, windowH;
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       ImGui_ImplSDL3_ProcessEvent(&event);
@@ -214,9 +256,6 @@ int main() {
         done = true;
       if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
         done = true;
-      if (event.type == SDL_EVENT_DROP_FILE && event.drop.windowID == SDL_GetWindowID(window)) {
-        inputFile.open(event.drop.data);
-      }
     }
 
     if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED) {
@@ -228,54 +267,67 @@ int main() {
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
+    SDL_GetWindowSizeInPixels(window, &windowW, &windowH);
+
     {
-      float mainMenuBarHeight;
-      ImGui::BeginMainMenuBar();
-      mainMenuBarHeight = ImGui::GetWindowSize().y;
-      if (ImGui::BeginMenu("File")) {
-        if (ImGui::MenuItem("Open")) {
-          nfdu8char_t *outPath;
-          nfdu8filteritem_t filters[2] = {{"Saleae/DSLogic TXT file", "txt"}, {"Saleae/DSLogic CSV file", "csv"}};
-          nfdopendialogu8args_t args = {0};
-          args.filterList = filters;
-          args.filterCount = 2;
-          nfdresult_t result = NFD_OpenDialogU8_With(&outPath, &args);
-          if (result == NFD_OKAY) {
-            inputFile.open(outPath);
-            NFD_FreePathU8(outPath);
+      ImGui::SetNextWindowPos({});
+      ImGui::SetNextWindowSize({static_cast<float>(windowW), static_cast<float>(windowH)});
+      if (ImGui::Begin("Main view", nullptr,
+                       ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+                         ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDecoration)) {
+        static bool openedSettings;
+        if (ImGui::BeginMenuBar()) {
+          if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Open")) {
+              logicViewArea.OpenDialog();
+            }
+
+            done = ImGui::MenuItem("Exit");
+            ImGui::EndMenu();
           }
+
+          if (ImGui::BeginMenu("Options")) {
+            openedSettings = ImGui::MenuItem("Settings");
+            ImGui::EndMenu();
+          }
+          ImGui::EndMenuBar();
         }
 
-        done = ImGui::MenuItem("Exit");
-        ImGui::EndMenu();
-      }
-      ImGui::EndMainMenuBar();
+        if (openedSettings) {
+          ImGui::BeginChild("##settings");
+          if (ImGui::CloseButton(ImGui::GetID("#CLOSE"), {ImGui::GetWindowSize().x - 40, 40})) {
+            openedSettings = false;
+          }
 
-      ImGui::SetNextWindowSize(ImGui::GetCursorScreenPos());
-      ImGui::Begin("Main view", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDecoration);
-      {
-        ImGui::PushFont(firaMonoBold);
-        if (ImGui::BeginChild("#absTime")) {
-          ImGui::Text("Test");
+          ImGui::Text("Style:");
+          ImGui::SameLine(0, 2);
+          if (ImGui::RadioButton("Dark", themeDark)) {
+            themeDark = true;
+            ImGui::StyleColorsDark();
+          }
+
+          ImGui::SameLine();
+
+          if (ImGui::RadioButton("Light", !themeDark)) {
+            themeDark = false;
+            ImGui::StyleColorsLight();
+          }
+
           ImGui::EndChild();
         }
-        ImGui::SameLine();
-        if (ImGui::BeginChild("#deltaTime")) {
-          ImGui::Text("Test");
-          ImGui::EndChild();
-        }
-        ImGui::PopFont();
+
+        ImGui::End();
       }
-      ImGui::End();
     }
     ImGui::Render();
     SDL_SetRenderDrawColorFloat(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
     SDL_RenderPresent(renderer);
-  }
 
-  inputFile.close();
+    ImGui::UpdatePlatformWindows();
+    ImGui::RenderPlatformWindowsDefault();
+  }
 
   // Cleanup
   ImGui_ImplSDLRenderer3_Shutdown();
@@ -286,6 +338,5 @@ int main() {
   SDL_DestroyWindow(window);
   SDL_Quit();
 
-  NFD::Quit();
   return eError_None;
 }

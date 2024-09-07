@@ -11,6 +11,6 @@ add_subdirectory(external/nfd nfd)
 
 add_executable(lake src/main.cpp)
 
-target_include_directories(lake PRIVATE external/imgui external/imgui/backends)
+target_include_directories(lake PRIVATE src external/imgui external/imgui/backends)
 target_link_libraries(lake PRIVATE fmt::fmt SDL3::SDL3 SDL3::SDL3-static imgui nfd)
 set_property(TARGET lake PROPERTY CXX_STANDARD 20)
