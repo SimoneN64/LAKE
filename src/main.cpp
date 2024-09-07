@@ -4,13 +4,12 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <imgui.h>
-#include <imgui_impl_sdl3.h>
-#include <imgui_impl_sdlrenderer3.h>
-#include <imgui_internal.h>
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_opengl.h>
-#include <FileHelper.hpp>
+#include <Window.hpp>
+#include <Parser.hpp>
+#include <Popup.hpp>
+#include <nfd.hpp>
+#include <filesystem>
+#include <LogicAnalyzerView.hpp>
 
 enum class CommunicationMode {
   KSTDLUNGO,
@@ -151,140 +150,43 @@ void ParseFile(std::ifstream &inputFile) {
   // output.close();
 }
 
-enum ErrorCodes {
-  eError_None,
-  eError_VideoSystemFailure,
-};
-
-template <class... Args>
-void DisplayErrorPopup(const char *fmt, Args... args) {
-  ImGui::PushStyleColor(ImGuiCol_Text, 0xFF5D67);
-  ImGui::OpenPopup("An error occurred");
-  if (ImGui::BeginPopupModal("An error occurred", nullptr)) {
-    ImGui::PopStyleColor();
-    ImGui::Text(fmt, args...);
-    ImGui::EndPopup();
-  } else {
-    ImGui::PopStyleColor();
-  }
-}
-
-struct LogicViewArea {
-  void OpenDialog() {
-    fs::path resultPath;
-    if (!Helpers::FileDialog::Get().OpenDialog(resultPath) &&
-        Helpers::FileDialog::Get().GetErrorState() == Helpers::FileDialog::Error) {
-      DisplayErrorPopup(Helpers::FileDialog::Get().GetError().c_str());
-    } else {
-      OpenFile(resultPath);
-    }
-  }
-
-  void OpenFile(const fs::path &path) {
-    csv.open(path);
-    if (!csv.good() || !csv.is_open()) {
-      DisplayErrorPopup("Could not open %s\n", csvPath.c_str());
-    }
-
-    csvPath = path;
-    couldOpenCsv = true;
-  }
-
-private:
-  bool couldOpenCsv = false;
-  std::ifstream csv;
-  fs::path csvPath;
-};
-
 int main() {
-  if (!SDL_Init(SDL_INIT_VIDEO)) {
-    fmt::print("Could not initialize video system! (SDL error: {})\n", SDL_GetError());
-    return eError_VideoSystemFailure;
-  }
-
-  SDL_Window *window = SDL_CreateWindow(
-    "LAKE", 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
-
-  if (window == nullptr) {
-    fmt::print("Could not initialize window! (SDL error: {})\n", SDL_GetError());
-    return eError_VideoSystemFailure;
-  }
-
-  SDL_Renderer *renderer = SDL_CreateRenderer(window, nullptr);
-  if (renderer == nullptr) {
-    fmt::print("Could not initialize renderer! (SDL error: {})\n", SDL_GetError());
-    return eError_VideoSystemFailure;
-  }
-
-  if (!SDL_SetRenderVSync(renderer, SDL_WINDOW_SURFACE_VSYNC_ADAPTIVE)) {
-    fmt::print("Adaptive VSync not available. Falling back to frame-swapping\n");
-    SDL_SetRenderVSync(renderer, true);
-  }
-
-  SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-  SDL_ShowWindow(window);
-
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  ImGuiIO &io = ImGui::GetIO();
-  (void)io;
-
-  // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-  // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-  ImGuiStyle &style = ImGui::GetStyle();
-  style.WindowRounding = 0.0f;
-  style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-
-  auto firaMonoRegular = io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", 16.f);
-  auto firaMonoBold = io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", 16.f);
-  ImGui::StyleColorsDark();
-
-  ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
-  ImGui_ImplSDLRenderer3_Init(renderer);
-
-  bool done = false;
   bool themeDark = true;
-  LogicViewArea logicViewArea;
+  PopupHandler popupHandler;
+  LogicAnalyzerView logicAnalyzerView(popupHandler);
+  Window window;
+  if (window.errorState == Window::VideoSystemFailure) {
+    return -1;
+  }
 
-  while (!done) {
-    int windowW, windowH;
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-      ImGui_ImplSDL3_ProcessEvent(&event);
-      if (event.type == SDL_EVENT_QUIT)
-        done = true;
-      if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
-        done = true;
-    }
+  while (!window.ShouldQuit()) {
+    window.HandleEvents();
 
-    if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED) {
-      SDL_Delay(10);
+    if (window.IsMinimized())
       continue;
-    }
 
-    ImGui_ImplSDLRenderer3_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
-
-    SDL_GetWindowSizeInPixels(window, &windowW, &windowH);
+    Window::NewFrame();
 
     {
       ImGui::SetNextWindowPos({});
-      ImGui::SetNextWindowSize({static_cast<float>(windowW), static_cast<float>(windowH)});
+      ImGui::SetNextWindowSize({static_cast<float>(window.Width()), static_cast<float>(window.Height())});
       if (ImGui::Begin("Main view", nullptr,
                        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
                          ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDecoration |
                          ImGuiWindowFlags_NoScrollWithMouse)) {
+
+        popupHandler.RunPopups();
+
         static bool openSettings = false;
         if (ImGui::BeginMenuBar()) {
           if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Open")) {
-              logicViewArea.OpenDialog();
+              logicAnalyzerView.OpenDialog();
             }
 
-            done = ImGui::MenuItem("Exit");
+            if (ImGui::MenuItem("Exit")) {
+              window.Quit();
+            }
             ImGui::EndMenu();
           }
 
@@ -297,16 +199,7 @@ int main() {
           ImGui::EndMenuBar();
         }
 
-        if (ImGui::BeginPopup("Test")) {
-          ImGui::Text("Ciao ciao");
-          ImGui::EndPopup();
-        }
-
-        if (openSettings) {
-          ImGui::OpenPopup("##settings");
-        }
-
-        if (ImGui::BeginPopupModal("##settings", &openSettings)) {
+        PopupHandler::MakePopup("Settings", &openSettings, [&themeDark]() {
           ImGui::Text("Style:");
           ImGui::SameLine(0, 2);
           if (ImGui::RadioButton("Dark", themeDark)) {
@@ -320,13 +213,12 @@ int main() {
             themeDark = false;
             ImGui::StyleColorsLight();
           }
+        });
 
-          ImGui::EndPopup();
-        }
-
-        ImGui::SetNextWindowSizeConstraints({float(windowW) / 4, float(windowH)},
-                                            {float(windowW) * 0.75f, float(windowH)});
-        if (ImGui::BeginChild("KLine Messages", {}, ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders)) {
+        ImGui::SetNextWindowSizeConstraints(
+          {static_cast<float>(window.Width()) / 4, static_cast<float>(window.Height())},
+          {static_cast<float>(window.Width()) * 0.75f, static_cast<float>(window.Height())});
+        if (ImGui::BeginChild("##messages", {}, ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders)) {
           for (int i = 0; i < 100; i++) {
             ImGui::Text("Lorem ipsum");
           }
@@ -335,9 +227,10 @@ int main() {
 
         ImGui::SameLine();
 
-        ImGui::SetNextWindowSizeConstraints({float(windowW) / 4, float(windowH)},
-                                            {float(windowW) * 0.75f, float(windowH)});
-        if (ImGui::BeginChild("Graph View")) {
+        ImGui::SetNextWindowSizeConstraints(
+          {static_cast<float>(window.Width()) / 4, static_cast<float>(window.Height())},
+          {static_cast<float>(window.Width()) * 0.75f, static_cast<float>(window.Height())});
+        if (ImGui::BeginChild("##graph")) {
           ImGui::Text("Lorem ipsum");
           ImGui::EndChild();
         }
@@ -345,24 +238,8 @@ int main() {
         ImGui::End();
       }
     }
-    ImGui::Render();
-    SDL_SetRenderDrawColorFloat(renderer, 0, 0, 0, 0);
-    SDL_RenderClear(renderer);
-    ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-    SDL_RenderPresent(renderer);
-
-    ImGui::UpdatePlatformWindows();
-    ImGui::RenderPlatformWindowsDefault();
+    window.Render();
   }
 
-  // Cleanup
-  ImGui_ImplSDLRenderer3_Shutdown();
-  ImGui_ImplSDL3_Shutdown();
-  ImGui::DestroyContext();
-
-  SDL_DestroyRenderer(renderer);
-  SDL_DestroyWindow(window);
-  SDL_Quit();
-
-  return eError_None;
+  return 0;
 }
