@@ -215,22 +215,84 @@ int main() {
           }
         });
 
-        ImGui::SetNextWindowSizeConstraints(
-          {static_cast<float>(window.Width()) / 4, static_cast<float>(window.Height())},
-          {static_cast<float>(window.Width()) * 0.75f, static_cast<float>(window.Height())});
-        if (ImGui::BeginChild("##messages", {}, ImGuiChildFlags_ResizeX | ImGuiChildFlags_Borders)) {
-          for (int i = 0; i < 100; i++) {
-            ImGui::Text("Lorem ipsum");
+        static float identifierSize = ImGui::CalcTextSize("Identifier").x + 2;
+        static float lengthSize = ImGui::CalcTextSize("Length").x + 2;
+        static float messageDataSize = ImGui::CalcTextSize("DE AD BE EF EF BE AD DE").x + 2;
+        static float checksumSize = ImGui::CalcTextSize("Checksum").x + 2;
+        static float totalPadding = ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().FrameBorderSize + 2;
+        static float totalW = identifierSize + totalPadding + lengthSize + totalPadding + messageDataSize +
+          totalPadding + checksumSize + totalPadding * 3;
+
+        ImGui::SetNextWindowSizeConstraints({totalW, -1}, {totalW, -1});
+        if (ImGui::BeginChild("##messages", {}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_Borders,
+                              ImGuiWindowFlags_NoScrollbar)) {
+          /*
+          std::vector<uint8_t> bytes{};
+          double absTime{}, deltaTime{};
+          uint8_t identifier{}, len{}, cks{};
+           */
+          static float scroll = 0;
+
+          ImGui::Text("Identifier");
+          ImGui::SameLine(0, totalPadding);
+          ImGui::Text("Length");
+          ImGui::SameLine(0, totalPadding);
+          ImGui::Text("Message");
+          ImGui::SameLine(0, messageDataSize - 24);
+          ImGui::Text("Checksum");
+
+          if (ImGui::BeginChild("##identifier", {}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX,
+                                ImGuiWindowFlags_NoScrollbar)) {
+            ImGui::SetWindowSize({identifierSize, -1});
+            ImGui::SetScrollY(scroll);
+            for (int i = 0; i < 128; i++) {
+              ImGui::Text("12");
+            }
+            ImGui::EndChild();
           }
+
+          ImGui::SameLine();
+
+          if (ImGui::BeginChild("##length", {}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX,
+                                ImGuiWindowFlags_NoScrollbar)) {
+            ImGui::SetWindowSize({lengthSize, -1});
+            ImGui::SetScrollY(scroll);
+            for (int i = 0; i < 128; i++) {
+              ImGui::Text("8");
+            }
+            ImGui::EndChild();
+          }
+
+          ImGui::SameLine();
+
+          if (ImGui::BeginChild("##messageData", {}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX)) {
+            ImGui::SetWindowSize({messageDataSize + 24, -1});
+            scroll = ImGui::GetScrollY();
+            for (int i = 0; i < 128; i++) {
+              ImGui::Text("DE AD BE EF EF BE AD DE");
+            }
+            ImGui::EndChild();
+          }
+
+          ImGui::SameLine();
+
+          if (ImGui::BeginChild("##cks", {}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX,
+                                ImGuiWindowFlags_NoScrollbar)) {
+            ImGui::SetWindowSize({checksumSize, -1});
+            ImGui::SetScrollY(scroll);
+            for (int i = 0; i < 128; i++) {
+              ImGui::Text("62");
+            }
+            ImGui::EndChild();
+          }
+
           ImGui::EndChild();
         }
 
         ImGui::SameLine();
 
-        ImGui::SetNextWindowSizeConstraints(
-          {static_cast<float>(window.Width()) / 4, static_cast<float>(window.Height())},
-          {static_cast<float>(window.Width()) * 0.75f, static_cast<float>(window.Height())});
-        if (ImGui::BeginChild("##graph")) {
+        if (ImGui::BeginChild("Graph", {}, ImGuiChildFlags_FrameStyle,
+                              ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize)) {
           ImGui::Text("Lorem ipsum");
           ImGui::EndChild();
         }
