@@ -1,5 +1,9 @@
 #pragma once
 #include <SDL3/SDL.h>
+#include <functional>
+
+struct ImVec2;
+struct ImFont;
 
 struct Window {
   enum ErrorState {
@@ -17,19 +21,23 @@ struct Window {
   static void NewFrame() noexcept;
   [[nodiscard]] int Width() const noexcept {
     int w, h;
-    SDL_GetRenderOutputSize(renderer, &w, &h);
+    SDL_GetWindowSize(window, &w, &h);
     return w;
   }
 
   [[nodiscard]] int Height() const noexcept {
     int w, h;
-    SDL_GetRenderOutputSize(renderer, &w, &h);
+    SDL_GetWindowSize(window, &w, &h);
     return h;
   }
 
   [[nodiscard]] bool IsMinimized() const noexcept { return SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED; }
 
   void Render() const noexcept;
+  static void MakeFrame(const char *name, ImVec2 size, const std::function<void()> &func, bool sameLine = true,
+                        bool scrollBar = false) noexcept;
+
+  ImFont *fontRegular{}, *fontBold{};
 
 private:
   SDL_Window *window{};

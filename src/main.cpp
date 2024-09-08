@@ -1,4 +1,7 @@
-﻿#include <cstdint>
+﻿#include "fmt/compile.h"
+
+
+#include <cstdint>
 #include <fmt/core.h>
 #include <fstream>
 #include <iostream>
@@ -168,138 +171,138 @@ int main() {
     Window::NewFrame();
 
     {
-      ImGui::SetNextWindowPos({});
-      ImGui::SetNextWindowSize({static_cast<float>(window.Width()), static_cast<float>(window.Height())});
-      if (ImGui::Begin("Main view", nullptr,
-                       ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
-                         ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDecoration |
-                         ImGuiWindowFlags_NoScrollWithMouse)) {
+      popupHandler.RunPopups();
 
-        popupHandler.RunPopups();
-
-        static bool openSettings = false;
-        if (ImGui::BeginMenuBar()) {
-          if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("Open")) {
-              logicAnalyzerView.OpenDialog();
-            }
-
-            if (ImGui::MenuItem("Exit")) {
-              window.Quit();
-            }
-            ImGui::EndMenu();
+      static float menuBarHeight = 0;
+      static bool openSettings = false;
+      if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+          if (ImGui::MenuItem("Open")) {
+            logicAnalyzerView.OpenDialog();
           }
 
-          if (ImGui::BeginMenu("Options")) {
-            if (ImGui::MenuItem("Settings")) {
-              openSettings = true;
-            }
-            ImGui::EndMenu();
+          if (ImGui::MenuItem("Exit")) {
+            window.Quit();
           }
-          ImGui::EndMenuBar();
+          ImGui::EndMenu();
         }
 
-        PopupHandler::MakePopup("Settings", &openSettings, [&themeDark]() {
-          ImGui::Text("Style:");
-          ImGui::SameLine(0, 2);
-          if (ImGui::RadioButton("Dark", themeDark)) {
-            themeDark = true;
-            ImGui::StyleColorsDark();
+        if (ImGui::BeginMenu("Options")) {
+          if (ImGui::MenuItem("Settings")) {
+            openSettings = true;
           }
+          ImGui::EndMenu();
+        }
+        menuBarHeight = ImGui::GetWindowHeight();
+        ImGui::EndMainMenuBar();
+      }
 
-          ImGui::SameLine();
-
-          if (ImGui::RadioButton("Light", !themeDark)) {
-            themeDark = false;
-            ImGui::StyleColorsLight();
-          }
-        });
-
-        static float identifierSize = ImGui::CalcTextSize("Identifier").x + 2;
-        static float lengthSize = ImGui::CalcTextSize("Length").x + 2;
-        static float messageDataSize = ImGui::CalcTextSize("DE AD BE EF EF BE AD DE").x + 2;
-        static float checksumSize = ImGui::CalcTextSize("Checksum").x + 2;
-        static float totalPadding = ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().FrameBorderSize + 2;
-        static float totalW = identifierSize + totalPadding + lengthSize + totalPadding + messageDataSize +
-          totalPadding + checksumSize + totalPadding * 3;
-
-        ImGui::SetNextWindowSizeConstraints({totalW, -1}, {totalW, -1});
-        if (ImGui::BeginChild("##messages", {}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_Borders,
-                              ImGuiWindowFlags_NoScrollbar)) {
-          /*
-          std::vector<uint8_t> bytes{};
-          double absTime{}, deltaTime{};
-          uint8_t identifier{}, len{}, cks{};
-           */
-          static float scroll = 0;
-
-          ImGui::Text("Identifier");
-          ImGui::SameLine(0, totalPadding);
-          ImGui::Text("Length");
-          ImGui::SameLine(0, totalPadding);
-          ImGui::Text("Message");
-          ImGui::SameLine(0, messageDataSize - 24);
-          ImGui::Text("Checksum");
-
-          if (ImGui::BeginChild("##identifier", {}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX,
-                                ImGuiWindowFlags_NoScrollbar)) {
-            ImGui::SetWindowSize({identifierSize, -1});
-            ImGui::SetScrollY(scroll);
-            for (int i = 0; i < 128; i++) {
-              ImGui::Text("12");
-            }
-            ImGui::EndChild();
-          }
-
-          ImGui::SameLine();
-
-          if (ImGui::BeginChild("##length", {}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX,
-                                ImGuiWindowFlags_NoScrollbar)) {
-            ImGui::SetWindowSize({lengthSize, -1});
-            ImGui::SetScrollY(scroll);
-            for (int i = 0; i < 128; i++) {
-              ImGui::Text("8");
-            }
-            ImGui::EndChild();
-          }
-
-          ImGui::SameLine();
-
-          if (ImGui::BeginChild("##messageData", {}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX)) {
-            ImGui::SetWindowSize({messageDataSize + 24, -1});
-            scroll = ImGui::GetScrollY();
-            for (int i = 0; i < 128; i++) {
-              ImGui::Text("DE AD BE EF EF BE AD DE");
-            }
-            ImGui::EndChild();
-          }
-
-          ImGui::SameLine();
-
-          if (ImGui::BeginChild("##cks", {}, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX,
-                                ImGuiWindowFlags_NoScrollbar)) {
-            ImGui::SetWindowSize({checksumSize, -1});
-            ImGui::SetScrollY(scroll);
-            for (int i = 0; i < 128; i++) {
-              ImGui::Text("62");
-            }
-            ImGui::EndChild();
-          }
-
-          ImGui::EndChild();
+      PopupHandler::MakePopup("Settings", &openSettings, [&]() {
+        ImGui::Text("Style:");
+        ImGui::SameLine(0, 2);
+        if (ImGui::RadioButton("Dark", themeDark)) {
+          themeDark = true;
+          ImGui::StyleColorsDark();
         }
 
         ImGui::SameLine();
 
-        if (ImGui::BeginChild("Graph", {}, ImGuiChildFlags_FrameStyle,
-                              ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize)) {
-          ImGui::Text("Lorem ipsum");
-          ImGui::EndChild();
+        if (ImGui::RadioButton("Light", !themeDark)) {
+          themeDark = false;
+          ImGui::StyleColorsLight();
         }
+      });
+
+      static auto scrollbar = 0.f;
+      static auto bordersWidth = ImGui::GetStyle().FramePadding.x + ImGui::GetStyle().ItemSpacing.x * 2;
+      static auto identifierWidth = ImGui::CalcTextSize("Identifier").x + bordersWidth;
+      static auto lengthWidth = ImGui::CalcTextSize("Length").x + bordersWidth;
+      static auto dataBytesWidth =
+        ImGui::CalcTextSize("FF FF FF FF FF FF FF FF").x + ImGui::CalcTextSize("........").x * 2 + bordersWidth;
+      static auto cksWidth = ImGui::CalcTextSize("Checksum").x + bordersWidth;
+      static auto absTimeWidth = ImGui::CalcTextSize("Absolute time (s)").x + bordersWidth;
+      static auto deltaTimeWidth = ImGui::CalcTextSize("Delta time (ms)").x + bordersWidth;
+
+      ImGui::SetNextWindowPos({0.f, menuBarHeight});
+      ImGui::SetNextWindowSize(
+        {static_cast<float>(window.Width()), static_cast<float>(window.Height()) - menuBarHeight});
+      if (ImGui::Begin("Data View", nullptr,
+                       ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)) {
+
+        ImGui::Text("Identifier");
+        ImGui::SameLine(0, bordersWidth);
+        ImGui::Text("Length");
+        ImGui::SameLine(0, bordersWidth);
+        ImGui::Text("Data bytes");
+        ImGui::SameLine(0, dataBytesWidth - ImGui::CalcTextSize("Data bytes").x + bordersWidth);
+        ImGui::Text("Checksum");
+        ImGui::SameLine(0, bordersWidth);
+        ImGui::Text("Absolute time (s)");
+        ImGui::SameLine(0, bordersWidth);
+        ImGui::Text("Delta time (ms)");
+
+        Window::MakeFrame("##identifier", {identifierWidth, -1}, [&]() {
+          ImGui::SetScrollY(scrollbar);
+          for (int i = 0; i < 100; i++) {
+            ImGui::Text("FF");
+          }
+        });
+
+        Window::MakeFrame("##length", {lengthWidth, -1}, [&]() {
+          ImGui::SetScrollY(scrollbar);
+          for (int i = 0; i < 100; i++) {
+            ImGui::Text("F");
+          }
+        });
+
+        Window::MakeFrame("##dataBytes", {dataBytesWidth, -1}, [&]() {
+          ImGui::SetScrollY(scrollbar);
+          for (int i = 0; i < 100; i++) {
+            for (int j = 0; j < 8; j++) {
+              ImGui::Text("FF ");
+              if (ImGui::IsItemHovered()) {
+                if (ImGui::BeginTooltip()) {
+                  ImGui::Text("Immagina... una forma d'onda quadra");
+                  ImGui::EndTooltip();
+                }
+              }
+              ImGui::SameLine();
+            }
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize("F").x * 8);
+            ImGui::Text("........");
+          }
+        });
+
+        Window::MakeFrame("##cks", {cksWidth, -1}, [&]() {
+          ImGui::SetScrollY(scrollbar);
+          for (int i = 0; i < 100; i++) {
+            ImGui::Text("FF");
+          }
+        });
+
+        Window::MakeFrame("##absTime", {absTimeWidth, -1}, [&]() {
+          ImGui::SetScrollY(scrollbar);
+          for (int i = 0; i < 100; i++) {
+            ImGui::Text("10000.000000");
+          }
+        });
+
+        Window::MakeFrame(
+          "##deltaTime", {deltaTimeWidth, -1},
+          [&]() {
+            scrollbar = ImGui::GetScrollY();
+
+            for (int i = 0; i < 100; i++) {
+              ImGui::Text("10000.000");
+            }
+          },
+          false, true);
 
         ImGui::End();
       }
     }
+
     window.Render();
   }
 

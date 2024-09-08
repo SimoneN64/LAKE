@@ -59,13 +59,19 @@ Window::Window() noexcept {
   // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+  io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
+  io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
+  io.ConfigFlags |= ImGuiConfigFlags_IsSRGB;
+  io.FontAllowUserScaling = true;
 
   ImGuiStyle &style = ImGui::GetStyle();
   style.WindowRounding = 0.0f;
-  style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+  style.WindowPadding = {0.f, 0.4f};
+  style.ChildBorderSize = 0;
+  style.ItemSpacing = {2.f, 2.f};
 
-  io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", 16.f);
-  io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", 16.f);
+  fontRegular = io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", 24.f);
+  fontBold = io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", 24.f);
   ImGui::StyleColorsDark();
 
   ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
@@ -98,4 +104,18 @@ void Window::Render() const noexcept {
 
   ImGui::UpdatePlatformWindows();
   ImGui::RenderPlatformWindowsDefault();
+}
+
+void Window::MakeFrame(const char *name, ImVec2 size, const std::function<void()> &func, bool sameLine,
+                       bool scrollBar) noexcept {
+  if (ImGui::BeginChild(name, size, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX,
+                        ImGuiWindowFlags_NoScrollbar * (!scrollBar) |
+                          ImGuiWindowFlags_NoScrollWithMouse * (!scrollBar))) {
+    func();
+    ImGui::EndChild();
+  }
+
+  if (sameLine) {
+    ImGui::SameLine();
+  }
 }
