@@ -56,56 +56,6 @@ CommunicationMode LogicAnalyzer::StrToCommMode(const std::string &param) noexcep
 
 std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) const noexcept {
   std::vector<LineData> result{};
-  std::vector<std::string> input{};
-  std::string lineFile;
-
-  std::getline(inputFile, lineFile); // skippa prima riga "Time [s],Value,Parity
-  // Error,Framing Error"
-
-  while (std::getline(inputFile, lineFile)) {
-    input.push_back(lineFile);
-  }
-
-  LineData previousData;
-
-  for (size_t i = 0; i < input.size();) {
-    LineData data;
-    data.SetAbsTime(input[i]);
-    data.SetDeltaTime(previousData.absTime == 0 ? 0 : data.absTime - previousData.absTime);
-    if (commMode == KSTDLUNGO) {
-      data.SetLen(commMode, input[i]);
-    }
-    i += 2;
-    data.SetIdentifier(input[i]);
-
-    if (commMode == KLUNGO_EXLEN) {
-      data.SetLen(commMode, input[++i]);
-    }
-
-    if (commMode == KSTDLUNGO && data.len == 0) {
-      data.len = LineData::GetDataByte(input[++i]);
-    }
-
-    i++;
-
-    std::string dataStr;
-    for (size_t j = i, count = 0; j < data.len + i; j++, count++) {
-      auto byte = LineData::GetDataByte(input[j]);
-      if (count > 0 && (count % 8) == 0) {
-        dataStr += "\n                        |                        |       "
-                   "     |      |        |";
-      }
-      dataStr += fmt::format("{:02X} ", byte);
-      data.bytes.push_back(byte);
-    }
-
-    i += data.len;
-
-    data.SetCks(input[i++]);
-    result.push_back(data);
-
-    previousData = data;
-  }
 
   return result;
 }

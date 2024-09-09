@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <fstream>
 #include <filesystem>
 #include <cstdint>
@@ -63,6 +64,7 @@ struct LogicAnalyzer {
   static CommunicationMode StrToCommMode(const std::string &param) noexcept;
 
 private:
+  std::atomic_bool isFinished = false;
   PopupHandler &popupHandler;
   bool couldOpenCsv = false;
   std::ifstream csv;
