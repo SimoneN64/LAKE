@@ -2,6 +2,7 @@
 #include <fstream>
 #include <filesystem>
 #include <cstdint>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -23,53 +24,27 @@ enum CommunicationMode {
 };
 
 struct AnalyzerSettings {
-  uint32_t bitrate;
-  uint8_t bitsPerFrame;
+  uint32_t bitrate{10416};
+  uint8_t bitsPerFrame{8};
 
-  enum StopBitType {
-    One,
-    OneAndAHalf,
-    Two
-  } stopBitType = One;
+  enum StopBitType { One, OneAndAHalf, Two } stopBitType = One;
 
-  enum ParityBitType {
-    None,
-    Even,
-    Odd
-  } parityBitType = None;
+  enum ParityBitType { None, Even, Odd } parityBitType = None;
 
-  enum SignificantBitType {
-    LSB,
-    MSB
-  } significantBitType = LSB;
+  enum SignificantBitType { LSB, MSB } significantBitType = LSB;
 
   bool signalInversion = false;
 };
 
 struct LineData {
   void SetAbsTime(const std::string &line) { absTime = GetTime(line); }
-
   void SetDeltaTime(const double &val) { deltaTime = val; }
-
   void SetIdentifier(const std::string &line) { identifier = GetDataByte(line); }
-
-  void SetLen(const CommunicationMode &commMode, const std::string &line) {
-    if (commMode == KSTDLUNGO) {
-      auto val = GetDataByte(line);
-      len = val - (val > 0xf ? 0x80 : 0);
-    } else if (commMode == KLUNGO_EXLEN) {
-      len = GetDataByte(line);
-    }
-  }
-
+  void SetLen(const CommunicationMode &commMode, const std::string &line);
   void SetCks(const std::string &line) { cks = GetDataByte(line); }
 
-  double GetTime(const std::string &line) { return std::stod(line.substr(0, line.find_first_of(','))); }
-
-  uint8_t GetDataByte(const std::string &line) {
-    return std::stoi(line.substr(line.find_first_of(',') + 1, line.find_first_of(',', line.find_first_of(',') + 1)),
-                     nullptr, 16);
-  }
+  static double GetTime(const std::string &line);
+  static uint8_t GetDataByte(const std::string &line);
 
   std::vector<uint8_t> bytes{};
   double absTime{}, deltaTime{};
@@ -85,7 +60,7 @@ struct LogicAnalyzer {
 
   CommunicationMode commMode = KSTDLUNGO;
 
-  CommunicationMode StrToCommMode(const std::string &param) const noexcept;
+  static CommunicationMode StrToCommMode(const std::string &param) noexcept;
 
 private:
   PopupHandler &popupHandler;

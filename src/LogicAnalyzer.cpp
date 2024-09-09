@@ -27,7 +27,7 @@ void LogicAnalyzer::OpenFile(const fs::path &path) noexcept {
   couldOpenCsv = true;
 }
 
-CommunicationMode LogicAnalyzer::StrToCommMode(const std::string &param) const noexcept {
+CommunicationMode LogicAnalyzer::StrToCommMode(const std::string &param) noexcept {
   if (param == "KSTDLUNGO")
     return KSTDLUNGO;
   if (param == "KSTDCORTO")
@@ -83,14 +83,14 @@ std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) const n
     }
 
     if (commMode == KSTDLUNGO && data.len == 0) {
-      data.len = data.GetDataByte(input[++i]);
+      data.len = LineData::GetDataByte(input[++i]);
     }
 
     i++;
 
     std::string dataStr;
     for (size_t j = i, count = 0; j < data.len + i; j++, count++) {
-      auto byte = data.GetDataByte(input[j]);
+      auto byte = LineData::GetDataByte(input[j]);
       if (count > 0 && (count % 8) == 0) {
         dataStr += "\n                        |                        |       "
                    "     |      |        |";

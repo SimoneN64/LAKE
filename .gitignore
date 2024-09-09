@@ -3,3 +3,5 @@ out/
 *build*/
 .idea/
 imgui.ini
+*.sal
+*.dsl

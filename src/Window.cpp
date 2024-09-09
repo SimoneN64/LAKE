@@ -25,8 +25,7 @@ Window::Window() noexcept {
     return;
   }
 
-  window =
-    SDL_CreateWindow("LAKE", 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+  window = SDL_CreateWindow("LAKE", 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 
   if (window == nullptr) {
     fmt::print("Could not initialize window! (SDL error: {})\n", SDL_GetError());
@@ -104,14 +103,16 @@ void Window::Render() const noexcept {
   ImGui::RenderPlatformWindowsDefault();
 }
 
-void Window::MakeFrame(const char *name, ImVec2 size, const std::function<void()> &func, float& scrollAmount, bool sameLine, bool scrollbar) const noexcept {
+void Window::MakeFrame(const char *name, ImVec2 size, const std::function<void()> &func, float &scrollAmount,
+                       bool sameLine, bool scrollbar) noexcept {
   if (!scrollbar)
     ImGui::SetNextWindowScroll({0.f, scrollAmount});
 
-  if (ImGui::BeginChild(name, size, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX, ImGuiWindowFlags_NoScrollbar * !scrollbar)) {
+  if (ImGui::BeginChild(name, size, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX,
+                        ImGuiWindowFlags_NoScrollbar * !scrollbar)) {
     if (scrollbar)
       scrollAmount = ImGui::GetScrollY();
-    
+
     func();
     ImGui::EndChild();
   }
@@ -172,8 +173,10 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
   static auto cksWidth = ImGui::CalcTextSize("Checksum").x + bordersWidth;
   static auto absTimeWidth = ImGui::CalcTextSize("Absolute time (s)").x + bordersWidth;
   static auto deltaTimeWidth = ImGui::CalcTextSize("Delta time (ms)").x + bordersWidth;
-  SDL_SetWindowSize(window, identifierWidth + lengthWidth + dataBytesWidth + cksWidth + absTimeWidth + deltaTimeWidth +
-                      ImGui::GetStyle().ScrollbarSize, Height());
+  SDL_SetWindowSize(window,
+                    identifierWidth + lengthWidth + dataBytesWidth + cksWidth + absTimeWidth + deltaTimeWidth +
+                      ImGui::GetStyle().ScrollbarSize,
+                    Height());
 
   ImGui::SetNextWindowPos({0.f, menuBarHeight});
   ImGui::SetNextWindowSize({static_cast<float>(Width()), static_cast<float>(Height()) - menuBarHeight});
@@ -196,75 +199,81 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
     MakeFrame(
       "##identifier", {identifierWidth, -1},
       [&]() {
-      for (int i = 0; i < 100; i++) {
-        ImGui::Text("%02X", 0xFF);
-      }
-    }, scrollbar);
+        for (int i = 0; i < 100; i++) {
+          ImGui::Text("%02X", 0xFF);
+        }
+      },
+      scrollbar);
 
     MakeFrame(
       "##length", {lengthWidth, -1},
       [&]() {
-      for (int i = 0; i < 100; i++) {
-        ImGui::Text("%01X", 0xF);
-      }
-    }, scrollbar);
+        for (int i = 0; i < 100; i++) {
+          ImGui::Text("%01X", 0xF);
+        }
+      },
+      scrollbar);
 
     MakeFrame(
       "##dataBytes", {dataBytesWidth, -1},
       [&]() {
-      for (int i = 0; i < 100; i++) {
-        for (int j = 0; j < 8; j++) {
-          ImGui::Text("FF");
-          if (ImGui::IsItemHovered()) {
-            if (ImGui::BeginTooltip()) {
-              ImGui::Text("Immagina... una forma d'onda quadra");
-              ImGui::EndTooltip();
+        for (int i = 0; i < 100; i++) {
+          for (int j = 0; j < 8; j++) {
+            ImGui::Text("FF");
+            if (ImGui::IsItemHovered()) {
+              if (ImGui::BeginTooltip()) {
+                ImGui::Text("Immagina... una forma d'onda quadra");
+                ImGui::EndTooltip();
+              }
             }
-          }
-          ImGui::SameLine();
-          ImGui::Text(" ");
-          if (ImGui::IsItemHovered()) {
-            if (ImGui::BeginTooltip()) {
-              ImGui::Text("Interbyte delay (us): %.3f", 0);
-              ImGui::EndTooltip();
+            ImGui::SameLine();
+            ImGui::Text(" ");
+            if (ImGui::IsItemHovered()) {
+              if (ImGui::BeginTooltip()) {
+                ImGui::Text("Interbyte delay (us): %.3f", 0);
+                ImGui::EndTooltip();
+              }
             }
-          }
-          ImGui::SameLine();
-        }
-        ImGui::SameLine();
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize("F").x * 8);
-        for (int j = 0; j < 8; j++) {
-          ImGui::Text("%c", '.');
-          if (j < 7) {
             ImGui::SameLine();
           }
+          ImGui::SameLine();
+          ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize("F").x * 8);
+          for (int j = 0; j < 8; j++) {
+            ImGui::Text("%c", '.');
+            if (j < 7) {
+              ImGui::SameLine();
+            }
+          }
         }
-      }
-    }, scrollbar);
+      },
+      scrollbar);
 
     MakeFrame(
       "##cks", {cksWidth, -1},
       [&]() {
-      for (int i = 0; i < 100; i++) {
-        ImGui::Text("%02X", 0xFF);
-      }
-    }, scrollbar);
+        for (int i = 0; i < 100; i++) {
+          ImGui::Text("%02X", 0xFF);
+        }
+      },
+      scrollbar);
 
     MakeFrame(
       "##absTime", {absTimeWidth, -1},
       [&]() {
-      for (int i = 0; i < 100; i++) {
-        ImGui::Text("%.6f", 10000.0);
-      }
-    }, scrollbar);
+        for (int i = 0; i < 100; i++) {
+          ImGui::Text("%.6f", 10000.0);
+        }
+      },
+      scrollbar);
 
     MakeFrame(
       "##deltaTime", {deltaTimeWidth, -1},
       [&]() {
-      for (int i = 0; i < 100; i++) {
-        ImGui::Text("%.3f", 10000.0);
-      }
-    }, scrollbar, false, true);
+        for (int i = 0; i < 100; i++) {
+          ImGui::Text("%.3f", 10000.0);
+        }
+      },
+      scrollbar, false, true);
 
     ImGui::End();
   }
