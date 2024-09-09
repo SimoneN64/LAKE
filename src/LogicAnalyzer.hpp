@@ -1,6 +1,7 @@
 #pragma once
 #include <fstream>
 #include <filesystem>
+#include <cstdint>
 
 namespace fs = std::filesystem;
 
@@ -19,6 +20,30 @@ enum CommunicationMode {
   KLUNGO_EDC15,
   INVALID,
   COMM_COUNT
+};
+
+struct AnalyzerSettings {
+  uint32_t bitrate;
+  uint8_t bitsPerFrame;
+
+  enum StopBitType {
+    One,
+    OneAndAHalf,
+    Two
+  } stopBitType = One;
+
+  enum ParityBitType {
+    None,
+    Even,
+    Odd
+  } parityBitType = None;
+
+  enum SignificantBitType {
+    LSB,
+    MSB
+  } significantBitType = LSB;
+
+  bool signalInversion = false;
 };
 
 struct LineData {
