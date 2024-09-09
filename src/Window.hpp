@@ -20,7 +20,7 @@ struct Window {
   [[nodiscard]] bool ShouldQuit() const noexcept { return done; }
   [[nodiscard]] SDL_Window *GetHandle() const noexcept { return window; }
   void HandleEvents() noexcept;
-  static void NewFrame() noexcept;
+  void NewFrame() noexcept;
   [[nodiscard]] int Width() const noexcept {
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
@@ -49,4 +49,6 @@ private:
   SDL_Renderer *renderer{};
   bool done = false;
   bool themeDark = true;
+  bool fontSizeChanged = false;
+  float fontSize = 20.f, prevFontSize = fontSize;
 };

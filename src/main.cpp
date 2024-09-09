@@ -24,7 +24,7 @@ int main() {
     if (window.IsMinimized())
       continue;
 
-    Window::NewFrame();
+    window.NewFrame();
 
     // if(logicAnalyzer.doneParsing) window.MainView(logicAnalyzer);
     // else window.ShowLoading();

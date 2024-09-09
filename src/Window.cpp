@@ -3,6 +3,7 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
 #include <imgui_internal.h>
+#include <implot.h>
 #include <SDL3/SDL_opengl.h>
 #include <Window.hpp>
 #include <LogicAnalyzer.hpp>
@@ -10,6 +11,7 @@
 Window::~Window() noexcept {
   ImGui_ImplSDLRenderer3_Shutdown();
   ImGui_ImplSDL3_Shutdown();
+  ImPlot::DestroyContext();
   ImGui::DestroyContext();
 
   SDL_DestroyRenderer(renderer);
@@ -25,7 +27,8 @@ Window::Window() noexcept {
     return;
   }
 
-  window = SDL_CreateWindow("LAKE", 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+  window =
+    SDL_CreateWindow("LAKE", 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 
   if (window == nullptr) {
     fmt::print("Could not initialize window! (SDL error: {})\n", SDL_GetError());
@@ -51,6 +54,7 @@ Window::Window() noexcept {
 
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
+  ImPlot::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
 
@@ -69,8 +73,9 @@ Window::Window() noexcept {
   style.ChildBorderSize = 0;
   style.ItemSpacing = {2.f, 2.f};
 
-  io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", 20.f);
-  io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", 20.f);
+  io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", fontSize);
+  io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", fontSize);
+
   ImGui::StyleColorsDark();
 
   ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
@@ -87,6 +92,18 @@ void Window::HandleEvents() noexcept {
 }
 
 void Window::NewFrame() noexcept {
+  if (fontSizeChanged) {
+    ImGuiIO &io = ImGui::GetIO();
+    io.Fonts->Clear();
+
+    io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", fontSize);
+    io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", fontSize);
+
+    ImGui_ImplSDLRenderer3_CreateFontsTexture();
+
+    fontSizeChanged = false;
+  }
+
   ImGui_ImplSDLRenderer3_NewFrame();
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
@@ -108,7 +125,7 @@ void Window::MakeFrame(const char *name, ImVec2 size, const std::function<void()
   if (!scrollbar)
     ImGui::SetNextWindowScroll({0.f, scrollAmount});
 
-  if (ImGui::BeginChild(name, size, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX,
+  if (ImGui::BeginChild(name, size, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX * !scrollbar,
                         ImGuiWindowFlags_NoScrollbar * !scrollbar)) {
     if (scrollbar)
       scrollAmount = ImGui::GetScrollY();
@@ -163,8 +180,15 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
       themeDark = false;
       ImGui::StyleColorsLight();
     }
+
+    ImGui::SliderFloat("Font size:", &fontSize, 4.f, 96.f, "%.0f");
+    if (fontSize != prevFontSize) {
+      fontSizeChanged = true;
+      prevFontSize = fontSize;
+    }
   });
 
+  static bool plotVisible = false;
   static auto bordersWidth = ImGui::GetStyle().FramePadding.x + ImGui::GetStyle().ItemSpacing.x * 2;
   static auto identifierWidth = ImGui::CalcTextSize("Identifier").x + bordersWidth;
   static auto lengthWidth = ImGui::CalcTextSize("Length").x + bordersWidth;
@@ -173,10 +197,6 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
   static auto cksWidth = ImGui::CalcTextSize("Checksum").x + bordersWidth;
   static auto absTimeWidth = ImGui::CalcTextSize("Absolute time (s)").x + bordersWidth;
   static auto deltaTimeWidth = ImGui::CalcTextSize("Delta time (ms)").x + bordersWidth;
-  SDL_SetWindowSize(window,
-                    identifierWidth + lengthWidth + dataBytesWidth + cksWidth + absTimeWidth + deltaTimeWidth +
-                      ImGui::GetStyle().ScrollbarSize,
-                    Height());
 
   ImGui::SetNextWindowPos({0.f, menuBarHeight});
   ImGui::SetNextWindowSize({static_cast<float>(Width()), static_cast<float>(Height()) - menuBarHeight});
@@ -220,11 +240,8 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
         for (int i = 0; i < 100; i++) {
           for (int j = 0; j < 8; j++) {
             ImGui::Text("FF");
-            if (ImGui::IsItemHovered()) {
-              if (ImGui::BeginTooltip()) {
-                ImGui::Text("Immagina... una forma d'onda quadra");
-                ImGui::EndTooltip();
-              }
+            if (ImGui::IsItemClicked()) {
+              plotVisible = true;
             }
             ImGui::SameLine();
             ImGui::Text(" ");
@@ -270,10 +287,24 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
       "##deltaTime", {deltaTimeWidth, -1},
       [&]() {
         for (int i = 0; i < 100; i++) {
-          ImGui::Text("%.3f", 10000.0);
+          ImGui::Text("%.6f", 10000.0);
         }
       },
-      scrollbar, false, true);
+      scrollbar, true, true);
+
+    if (plotVisible) {
+      if (ImPlot::BeginPlot("Square wave")) {
+        static constexpr float time[] = {0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008};
+        static constexpr float bits[] = {1.f, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f, 0.f};
+        ImPlot::SetupAxisLimits(ImAxis_Y1, -0.3f, 1.3f);
+
+        ImPlot::PlotStairs("##squareWave", time, bits, 8);
+
+        ImPlot::EndPlot();
+      }
+
+      plotVisible = !ImGui::CloseButton(ImGui::GetID("Data View"), {ImGui::GetWindowSize().x - 40.f, 40.f});
+    }
 
     ImGui::End();
   }
