@@ -82,10 +82,8 @@ void Window::HandleEvents() noexcept {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     ImGui_ImplSDL3_ProcessEvent(&event);
-    if (event.type == SDL_EVENT_QUIT)
-      done = true;
-    if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
-      done = true;
+    done = (event.type == SDL_EVENT_QUIT) ||
+      (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window));
   }
 }
 
@@ -106,10 +104,14 @@ void Window::Render() const noexcept {
   ImGui::RenderPlatformWindowsDefault();
 }
 
-void Window::MakeFrame(const char *name, ImVec2 size, const std::function<void()> &func, bool sameLine,
-                       bool scrollBar) noexcept {
-  if (ImGui::BeginChild(name, size, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX,
-                        ImGuiWindowFlags_NoScrollbar * (!scrollBar))) {
+void Window::MakeFrame(const char *name, ImVec2 size, const std::function<void()> &func, float& scrollAmount, bool sameLine, bool scrollbar) const noexcept {
+  if (!scrollbar)
+    ImGui::SetNextWindowScroll({0.f, scrollAmount});
+
+  if (ImGui::BeginChild(name, size, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX, ImGuiWindowFlags_NoScrollbar * !scrollbar)) {
+    if (scrollbar)
+      scrollAmount = ImGui::GetScrollY();
+    
     func();
     ImGui::EndChild();
   }
@@ -162,7 +164,6 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
     }
   });
 
-  static auto scrollbar = 0.f;
   static auto bordersWidth = ImGui::GetStyle().FramePadding.x + ImGui::GetStyle().ItemSpacing.x * 2;
   static auto identifierWidth = ImGui::CalcTextSize("Identifier").x + bordersWidth;
   static auto lengthWidth = ImGui::CalcTextSize("Length").x + bordersWidth;
@@ -179,6 +180,7 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
   if (ImGui::Begin("Data View", nullptr,
                    ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)) {
 
+    static auto scrollbar = 0.f;
     ImGui::Text("Identifier");
     ImGui::SameLine(0, bordersWidth);
     ImGui::Text("Length");
@@ -191,22 +193,25 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
     ImGui::SameLine(0, bordersWidth);
     ImGui::Text("Delta time (ms)");
 
-    Window::MakeFrame("##identifier", {identifierWidth, -1}, [&]() {
-      ImGui::SetScrollY(scrollbar);
+    MakeFrame(
+      "##identifier", {identifierWidth, -1},
+      [&]() {
       for (int i = 0; i < 100; i++) {
         ImGui::Text("%02X", 0xFF);
       }
-    });
+    }, scrollbar);
 
-    Window::MakeFrame("##length", {lengthWidth, -1}, [&]() {
-      ImGui::SetScrollY(scrollbar);
+    MakeFrame(
+      "##length", {lengthWidth, -1},
+      [&]() {
       for (int i = 0; i < 100; i++) {
         ImGui::Text("%01X", 0xF);
       }
-    });
+    }, scrollbar);
 
-    Window::MakeFrame("##dataBytes", {dataBytesWidth, -1}, [&]() {
-      ImGui::SetScrollY(scrollbar);
+    MakeFrame(
+      "##dataBytes", {dataBytesWidth, -1},
+      [&]() {
       for (int i = 0; i < 100; i++) {
         for (int j = 0; j < 8; j++) {
           ImGui::Text("FF");
@@ -228,35 +233,38 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
         }
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize("F").x * 8);
-        ImGui::Text("%c%c%c%c%c%c%c%c", '.', '.', '.', '.', '.', '.', '.', '.');
+        for (int j = 0; j < 8; j++) {
+          ImGui::Text("%c", '.');
+          if (j < 7) {
+            ImGui::SameLine();
+          }
+        }
       }
-    });
+    }, scrollbar);
 
-    Window::MakeFrame("##cks", {cksWidth, -1}, [&]() {
-      ImGui::SetScrollY(scrollbar);
+    MakeFrame(
+      "##cks", {cksWidth, -1},
+      [&]() {
       for (int i = 0; i < 100; i++) {
         ImGui::Text("%02X", 0xFF);
       }
-    });
+    }, scrollbar);
 
-    Window::MakeFrame("##absTime", {absTimeWidth, -1}, [&]() {
-      ImGui::SetScrollY(scrollbar);
+    MakeFrame(
+      "##absTime", {absTimeWidth, -1},
+      [&]() {
       for (int i = 0; i < 100; i++) {
         ImGui::Text("%.6f", 10000.0);
       }
-    });
+    }, scrollbar);
 
-    Window::MakeFrame(
+    MakeFrame(
       "##deltaTime", {deltaTimeWidth, -1},
       [&]() {
-        scrollbar = ImGui::GetScrollY();
-        ImGui::SetScrollY(scrollbar);
-
-        for (int i = 0; i < 100; i++) {
-          ImGui::Text("%.3f", 10000.0);
-        }
-      },
-      false, true);
+      for (int i = 0; i < 100; i++) {
+        ImGui::Text("%.3f", 10000.0);
+      }
+    }, scrollbar, false, true);
 
     ImGui::End();
   }

@@ -36,8 +36,9 @@ struct Window {
   [[nodiscard]] bool IsMinimized() const noexcept { return SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED; }
 
   void Render() const noexcept;
-  static void MakeFrame(const char *name, ImVec2 size, const std::function<void()> &func, bool sameLine = true,
-                        bool scrollBar = false) noexcept;
+  void MakeFrame(const char *name, ImVec2 size, const std::function<void()> &func,
+                        float& scrollAmount, bool sameLine = true,
+                        bool scrollBar = false) const noexcept;
 
   void MainView(LogicAnalyzer&) noexcept;
 
