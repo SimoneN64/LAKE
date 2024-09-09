@@ -1,9 +1,11 @@
 #pragma once
 #include <SDL3/SDL.h>
 #include <functional>
+#include <Popup.hpp>
 
 struct ImVec2;
 struct ImFont;
+struct LogicAnalyzer;
 
 struct Window {
   enum ErrorState {
@@ -37,10 +39,14 @@ struct Window {
   static void MakeFrame(const char *name, ImVec2 size, const std::function<void()> &func, bool sameLine = true,
                         bool scrollBar = false) noexcept;
 
-  ImFont *fontRegular{}, *fontBold{};
+  void MainView(LogicAnalyzer&) noexcept;
+
+  auto &GetPopupHandler() noexcept { return popupHandler; }
 
 private:
+  PopupHandler popupHandler;
   SDL_Window *window{};
   SDL_Renderer *renderer{};
   bool done = false;
+  bool themeDark = true;
 };
