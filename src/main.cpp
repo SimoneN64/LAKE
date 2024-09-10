@@ -26,10 +26,14 @@ int main() {
 
     window.NewFrame();
 
-    // if(logicAnalyzer.doneParsing) window.MainView(logicAnalyzer);
-    // else window.ShowLoading();
-
-    window.MainView(logicAnalyzer);
+    if (logicAnalyzer.fileIsLoaded) {
+      if (logicAnalyzer.isFinishedParsing)
+        window.MainView(logicAnalyzer);
+      else
+        window.ShowLoading(logicAnalyzer);
+    } else {
+      window.AskForFileAndLineSettings(logicAnalyzer);
+    }
 
     window.Render();
   }

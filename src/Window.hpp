@@ -40,10 +40,13 @@ struct Window {
                         bool sameLine = true, bool scrollBar = false) noexcept;
 
   void MainView(LogicAnalyzer &) noexcept;
+  void ShowLoading(LogicAnalyzer &) noexcept;
+  void AskForFileAndLineSettings(LogicAnalyzer &) noexcept;
 
   auto &GetPopupHandler() noexcept { return popupHandler; }
 
 private:
+  void ShowMainMenuBar(LogicAnalyzer &) noexcept;
   PopupHandler popupHandler;
   SDL_Window *window{};
   SDL_Renderer *renderer{};
@@ -51,4 +54,6 @@ private:
   bool themeDark = true;
   bool fontSizeChanged = false;
   float fontSize = 20.f, prevFontSize = fontSize;
+  bool openSettings = false;
+  float menuBarHeight = 0;
 };

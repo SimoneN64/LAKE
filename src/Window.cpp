@@ -139,11 +139,7 @@ void Window::MakeFrame(const char *name, ImVec2 size, const std::function<void()
   }
 }
 
-void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
-  popupHandler.RunPopups();
-
-  static float menuBarHeight = 0;
-  static bool openSettings = false;
+void Window::ShowMainMenuBar(LogicAnalyzer &logicAnalyzer) noexcept {
   if (ImGui::BeginMainMenuBar()) {
     if (ImGui::BeginMenu("File")) {
       if (ImGui::MenuItem("Open")) {
@@ -165,6 +161,12 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
     menuBarHeight = ImGui::GetWindowHeight();
     ImGui::EndMainMenuBar();
   }
+}
+
+void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
+  popupHandler.RunPopups();
+
+  ShowMainMenuBar(logicAnalyzer);
 
   PopupHandler::MakePopup("Settings", &openSettings, [&]() {
     ImGui::Text("Style:");
@@ -308,4 +310,46 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
 
     ImGui::End();
   }
+}
+
+void Window::ShowLoading(LogicAnalyzer &logicAnalyzer) noexcept {
+  ImGui::OpenPopup("Loading");
+  if (ImGui::BeginPopupModal("Loading", nullptr,
+                             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+    ImGui::Text("Parsing %s...", logicAnalyzer.GetPath());
+    ImGui::EndPopup();
+  }
+
+  ShowMainMenuBar(logicAnalyzer);
+}
+
+void Window::AskForFileAndLineSettings(LogicAnalyzer &logicAnalyzer) noexcept {
+  ImGui::OpenPopup("Load a file");
+  if (ImGui::BeginPopupModal("Load a file", nullptr,
+                             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+    static const char* parity[] = {"None", "Even", "Odd "};
+    static int currParity = 0;
+    static const char *significantBit[] = {"LSB", "MSB"};
+    static int currSignificantBit = 0;
+    ImGui::InputScalar("Bitrate", ImGuiDataType_U32, &logicAnalyzer.settings.bitrate);
+    ImGui::InputScalar("Bits per frame", ImGuiDataType_U8, &logicAnalyzer.settings.bitsPerFrame);
+    ImGui::InputFloat("Stop bit type", &logicAnalyzer.settings.stopBitType);
+    if (ImGui::BeginCombo("Parity bit", parity[currParity])) {
+      ImGui::Combo("##parities", &currParity, parity, 3);
+      ImGui::EndCombo();
+    }
+    if (ImGui::BeginCombo("Significant bit", significantBit[currSignificantBit])) {
+      ImGui::Combo("##significantBits", &currSignificantBit, significantBit, 2);
+      ImGui::EndCombo();
+    }
+    ImGui::InputScalar("Signal inversion", ImGuiDataType_Bool, &logicAnalyzer.settings.signalInversion);
+
+    if (ImGui::Button("Select file")) {
+      logicAnalyzer.OpenDialog();
+    }
+
+    ImGui::EndPopup();
+  }
+
+  ShowMainMenuBar(logicAnalyzer);
 }

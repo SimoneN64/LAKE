@@ -5,7 +5,7 @@
 
 void LogicAnalyzer::OpenDialog() noexcept {
   nfdchar_t *outpath;
-  constexpr nfdfilteritem_t filters[] = {{"Saleae/DSView TXT file", "txt"}, {"Saleae/DSView CSV file", "csv"}};
+  constexpr nfdfilteritem_t filters[] = {{"Saleae project file", "sal"}, {"DSView project file", "dsl"}};
   auto result = NFD::OpenDialog(outpath, filters, 2);
   if (result == NFD_ERROR) {
     popupHandler.ScheduleErrorPopup("An error occurred",
@@ -17,14 +17,14 @@ void LogicAnalyzer::OpenDialog() noexcept {
 }
 
 void LogicAnalyzer::OpenFile(const fs::path &path) noexcept {
-  csv.open(path);
-  if (!csv.good() || !csv.is_open()) {
+  file.open(path);
+  if (!file.good() || !file.is_open()) {
     popupHandler.ScheduleErrorPopup("An error occurred", fmt::format("Could not open {}\n", path.string()));
     return;
   }
 
-  csvPath = path;
-  couldOpenCsv = true;
+  fileIsLoaded = true;
+  filePath = path;
 }
 
 CommunicationMode LogicAnalyzer::StrToCommMode(const std::string &param) noexcept {
@@ -54,8 +54,10 @@ CommunicationMode LogicAnalyzer::StrToCommMode(const std::string &param) noexcep
   return INVALID;
 }
 
-std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) const noexcept {
+std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcept {
   std::vector<LineData> result{};
+
+  isFinishedParsing = true;
 
   return result;
 }

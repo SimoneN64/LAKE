@@ -27,12 +27,10 @@ enum CommunicationMode {
 struct AnalyzerSettings {
   uint32_t bitrate{10416};
   uint8_t bitsPerFrame{8};
+  float stopBitType = 1.f;
 
-  enum StopBitType { One, OneAndAHalf, Two } stopBitType = One;
-
-  enum ParityBitType { None, Even, Odd } parityBitType = None;
-
-  enum SignificantBitType { LSB, MSB } significantBitType = LSB;
+  enum ParityBitType : uint8_t { None, Even, Odd } parityBitType = None;
+  enum SignificantBitType : uint8_t { LSB, MSB } significantBitType = LSB;
 
   bool signalInversion = false;
 };
@@ -57,16 +55,20 @@ struct LogicAnalyzer {
 
   void OpenDialog() noexcept;
   void OpenFile(const fs::path &path) noexcept;
-  std::vector<LineData> ParseFile(std::ifstream &inputFile) const noexcept;
+  std::vector<LineData> ParseFile(std::ifstream &inputFile) noexcept;
+  auto &GetPath() const noexcept { return filePath; }
 
   CommunicationMode commMode = KSTDLUNGO;
 
   static CommunicationMode StrToCommMode(const std::string &param) noexcept;
 
+  std::atomic_bool isFinishedParsing = false;
+  std::atomic_bool errorParsing = false;
+  bool fileIsLoaded = false;
+  AnalyzerSettings settings{};
+
 private:
-  std::atomic_bool isFinished = false;
   PopupHandler &popupHandler;
-  bool couldOpenCsv = false;
-  std::ifstream csv;
-  fs::path csvPath;
+  std::ifstream file{};
+  fs::path filePath{};
 };
