@@ -34,6 +34,18 @@ struct Window {
     return h;
   }
 
+  [[nodiscard]] int PosX() const noexcept {
+    int x, y;
+    SDL_GetWindowPosition(window, &x, &y);
+    return x;
+  }
+
+  [[nodiscard]] int PosY() const noexcept {
+    int x, y;
+    SDL_GetWindowPosition(window, &x, &y);
+    return y;
+  }
+
   [[nodiscard]] bool IsMinimized() const noexcept { return SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED; }
 
   void Render() const noexcept;
@@ -50,12 +62,11 @@ private:
   void ShowMainMenuBar(LogicAnalyzer &) noexcept;
   PopupHandler popupHandler;
   SDL_Window *window{};
-  SDL_Renderer *renderer{};
+  SDL_GLContext glContext{};
   bool done = false;
   bool themeDark = true;
   bool fontSizeChanged = false;
   float fontSize = 20.f, prevFontSize = fontSize;
   bool openSettings = false;
-  float menuBarHeight = 0;
   float scrollAmount = 0.f;
 };

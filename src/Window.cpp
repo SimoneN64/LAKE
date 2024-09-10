@@ -1,7 +1,7 @@
 #include <fmt/core.h>
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
-#include <imgui_impl_sdlrenderer3.h>
+#include <imgui_impl_opengl3.h>
 #include <imgui_internal.h>
 #include <implot.h>
 #include <SDL3/SDL_opengl.h>
@@ -9,12 +9,12 @@
 #include <LogicAnalyzer.hpp>
 
 Window::~Window() noexcept {
-  ImGui_ImplSDLRenderer3_Shutdown();
+  ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplSDL3_Shutdown();
   ImPlot::DestroyContext();
   ImGui::DestroyContext();
 
-  SDL_DestroyRenderer(renderer);
+  SDL_GL_DestroyContext(glContext);
   SDL_DestroyWindow(window);
   SDL_Quit();
 }
@@ -27,8 +27,17 @@ Window::Window() noexcept {
     return;
   }
 
-  window =
-    SDL_CreateWindow("LAKE", 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+  const char *glsl_version = "#version 460";
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+  SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+
+  window = SDL_CreateWindow("LAKE", 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
   if (window == nullptr) {
     fmt::print("Could not initialize window! (SDL error: {})\n", SDL_GetError());
@@ -37,20 +46,11 @@ Window::Window() noexcept {
     return;
   }
 
-  renderer = SDL_CreateRenderer(window, nullptr);
-  if (renderer == nullptr) {
-    fmt::print("Could not initialize renderer! (SDL error: {})\n", SDL_GetError());
-    errorState = VideoSystemFailure;
-
-    return;
-  }
-
-  if (!SDL_SetRenderVSync(renderer, SDL_WINDOW_SURFACE_VSYNC_ADAPTIVE)) {
-    fmt::print("Adaptive VSync not available. Falling back to frame-swapping\n");
-    SDL_SetRenderVSync(renderer, true);
-  }
-
   SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+
+  glContext = SDL_GL_CreateContext(window);
+  SDL_GL_MakeCurrent(window, glContext);
+  SDL_GL_SetSwapInterval(1); // Enable vsync
 
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
@@ -63,22 +63,19 @@ Window::Window() noexcept {
   io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
   io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
   io.ConfigFlags |= ImGuiConfigFlags_IsSRGB;
-  io.FontAllowUserScaling = true;
 
   ImGui::StyleColorsDark();
 
   ImGuiStyle &style = ImGui::GetStyle();
 
-  if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-    style.WindowRounding = 0.0f;
-    style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-  }
+  style.WindowRounding = 0.0f;
+  style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 
   io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", fontSize);
   io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", fontSize);
 
-  ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
-  ImGui_ImplSDLRenderer3_Init(renderer);
+  ImGui_ImplSDL3_InitForOpenGL(window, glContext);
+  ImGui_ImplOpenGL3_Init(glsl_version);
 }
 
 void Window::HandleEvents() noexcept {
@@ -98,35 +95,38 @@ void Window::NewFrame() noexcept {
     io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", fontSize);
     io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", fontSize);
 
-    ImGui_ImplSDLRenderer3_CreateFontsTexture();
+    ImGui_ImplOpenGL3_CreateFontsTexture();
 
     fontSizeChanged = false;
   }
 
-  ImGui_ImplSDLRenderer3_NewFrame();
+  ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
 }
 
 void Window::Render() const noexcept {
   ImGui::Render();
-  SDL_SetRenderDrawColorFloat(renderer, 0, 0, 0, 0);
-  SDL_RenderClear(renderer);
-  ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+  glViewport(0, 0, Width(), Height());
+  glClearColor(0.f, 0.f, 0.f, 0.f);
+  glClear(GL_COLOR_BUFFER_BIT);
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+  SDL_Window *backup_current_window = SDL_GL_GetCurrentWindow();
+  SDL_GLContext backup_current_context = SDL_GL_GetCurrentContext();
   ImGui::UpdatePlatformWindows();
   ImGui::RenderPlatformWindowsDefault();
+  SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
 
-  SDL_RenderPresent(renderer);
+  SDL_GL_SwapWindow(window);
 }
 
 void Window::MakeFrame(const char *name, const std::function<void()> &func, bool *visible) noexcept {
   ImGui::SetNextWindowScroll({0.f, scrollAmount});
-  if (ImGui::Begin(name, visible)) {
-    scrollAmount = ImGui::GetScrollY();
-    func();
-    ImGui::End();
-  }
+  ImGui::Begin(name, visible);
+  scrollAmount = ImGui::GetScrollY();
+  func();
+  ImGui::End();
 }
 
 void Window::ShowMainMenuBar(LogicAnalyzer &logicAnalyzer) noexcept {
@@ -148,7 +148,7 @@ void Window::ShowMainMenuBar(LogicAnalyzer &logicAnalyzer) noexcept {
       }
       ImGui::EndMenu();
     }
-    menuBarHeight = ImGui::GetWindowHeight();
+
     ImGui::EndMainMenuBar();
   }
 }
@@ -261,11 +261,10 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
 
 void Window::ShowLoading(LogicAnalyzer &logicAnalyzer) noexcept {
   ImGui::OpenPopup("Loading");
+  ImGui::SetNextWindowPos({PosX() + Width() / 2.f, PosY() + Height() / 2.f}, 0, {0.5f, 0.5f});
   if (ImGui::BeginPopupModal("Loading", nullptr,
                              ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
     ImGui::Text("Parsing \"%s\"", logicAnalyzer.GetPath().string().c_str());
-    ImVec2 windowSize = ImGui::GetWindowSize();
-    ImGui::SetWindowPos({Width() / 2 - windowSize.x / 2, Height() / 2 - windowSize.y / 2});
     ImGui::EndPopup();
   }
 
@@ -318,6 +317,7 @@ static inline float StrToStopBit(const std::string &str) noexcept {
 
 void Window::AskForFileAndLineSettings(LogicAnalyzer &logicAnalyzer) noexcept {
   ImGui::OpenPopup("Load a file");
+  ImGui::SetNextWindowPos({PosX() + Width() / 2.f, PosY() + Height() / 2.f}, 0, {0.5f, 0.5f});
   if (ImGui::BeginPopupModal("Load a file", nullptr,
                              ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
     ImGui::InputScalar("Bitrate", ImGuiDataType_U32, &logicAnalyzer.settings.bitrate);

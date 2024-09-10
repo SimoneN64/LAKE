@@ -27,22 +27,20 @@ struct PopupHandler {
   static void MakePopup(const char *title, bool *open, const char *message) noexcept {
     if (*open) {
       ImGui::OpenPopup(title);
-    }
-
-    if (ImGui::BeginPopupModal(title, open)) {
-      ImGui::Text(message);
-      ImGui::EndPopup();
+      if (ImGui::BeginPopupModal(title, open)) {
+        ImGui::Text(message);
+        ImGui::EndPopup();
+      }
     }
   }
 
   static void MakePopup(const char *title, bool *open, const std::function<void()> &impl) noexcept {
     if (*open) {
       ImGui::OpenPopup(title);
-    }
-
-    if (ImGui::BeginPopupModal(title, open)) {
-      impl();
-      ImGui::EndPopup();
+      if (ImGui::BeginPopupModal(title, open)) {
+        impl();
+        ImGui::EndPopup();
+      }
     }
   }
 

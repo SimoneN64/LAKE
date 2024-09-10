@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <LogicAnalyzer.hpp>
 
+
 int main() {
   Window window;
   LogicAnalyzer logicAnalyzer(window.GetPopupHandler());
@@ -26,14 +27,14 @@ int main() {
 
     window.NewFrame();
 
-    // if (logicAnalyzer.fileIsLoaded) {
-    //   if (logicAnalyzer.isFinishedParsing)
-    window.MainView(logicAnalyzer);
-    //   else
-    //     window.ShowLoading(logicAnalyzer);
-    // } else {
-    //   window.AskForFileAndLineSettings(logicAnalyzer);
-    // }
+    if (logicAnalyzer.fileIsLoaded) {
+      if (logicAnalyzer.isFinishedParsing)
+        window.MainView(logicAnalyzer);
+      else
+        window.ShowLoading(logicAnalyzer);
+    } else {
+      window.AskForFileAndLineSettings(logicAnalyzer);
+    }
 
     window.Render();
   }
