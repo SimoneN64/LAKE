@@ -58,8 +58,6 @@ Window::Window() noexcept {
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
 
-  // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-  // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
   io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
@@ -67,16 +65,17 @@ Window::Window() noexcept {
   io.ConfigFlags |= ImGuiConfigFlags_IsSRGB;
   io.FontAllowUserScaling = true;
 
+  ImGui::StyleColorsDark();
+
   ImGuiStyle &style = ImGui::GetStyle();
-  style.WindowRounding = 0.0f;
-  style.WindowPadding = {0.f, 0.4f};
-  style.ChildBorderSize = 0;
-  style.ItemSpacing = {2.f, 2.f};
+
+  if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+    style.WindowRounding = 0.0f;
+    style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+  }
 
   io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", fontSize);
   io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", fontSize);
-
-  ImGui::StyleColorsDark();
 
   ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
   ImGui_ImplSDLRenderer3_Init(renderer);
@@ -114,28 +113,19 @@ void Window::Render() const noexcept {
   SDL_SetRenderDrawColorFloat(renderer, 0, 0, 0, 0);
   SDL_RenderClear(renderer);
   ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-  SDL_RenderPresent(renderer);
 
   ImGui::UpdatePlatformWindows();
   ImGui::RenderPlatformWindowsDefault();
+
+  SDL_RenderPresent(renderer);
 }
 
-void Window::MakeFrame(const char *name, ImVec2 size, const std::function<void()> &func, float &scrollAmount,
-                       bool sameLine, bool scrollbar) noexcept {
-  if (!scrollbar)
-    ImGui::SetNextWindowScroll({0.f, scrollAmount});
-
-  if (ImGui::BeginChild(name, size, ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeX * !scrollbar,
-                        ImGuiWindowFlags_NoScrollbar * !scrollbar)) {
-    if (scrollbar)
-      scrollAmount = ImGui::GetScrollY();
-
+void Window::MakeFrame(const char *name, const std::function<void()> &func, bool *visible) noexcept {
+  ImGui::SetNextWindowScroll({0.f, scrollAmount});
+  if (ImGui::Begin(name, visible)) {
+    scrollAmount = ImGui::GetScrollY();
     func();
-    ImGui::EndChild();
-  }
-
-  if (sameLine) {
-    ImGui::SameLine();
+    ImGui::End();
   }
 }
 
@@ -190,125 +180,82 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
     }
   });
 
+  auto style = ImGui::GetStyle();
+  static auto scrollbar = 0.f;
   static bool plotVisible = false;
-  static auto bordersWidth = ImGui::GetStyle().FramePadding.x + ImGui::GetStyle().ItemSpacing.x * 2;
-  static auto identifierWidth = ImGui::CalcTextSize("Identifier").x + bordersWidth;
-  static auto lengthWidth = ImGui::CalcTextSize("Length").x + bordersWidth;
-  static auto dataBytesWidth =
-    ImGui::CalcTextSize("FF FF FF FF FF FF FF FF").x + ImGui::CalcTextSize("........").x * 2 + bordersWidth;
-  static auto cksWidth = ImGui::CalcTextSize("Checksum").x + bordersWidth;
-  static auto absTimeWidth = ImGui::CalcTextSize("Absolute time (s)").x + bordersWidth;
-  static auto deltaTimeWidth = ImGui::CalcTextSize("Delta time (ms)").x + bordersWidth;
 
-  ImGui::SetNextWindowPos({0.f, menuBarHeight});
-  ImGui::SetNextWindowSize({static_cast<float>(Width()), static_cast<float>(Height()) - menuBarHeight});
-  if (ImGui::Begin("Data View", nullptr,
-                   ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)) {
-
-    static auto scrollbar = 0.f;
-    ImGui::Text("Identifier");
-    ImGui::SameLine(0, bordersWidth);
-    ImGui::Text("Length");
-    ImGui::SameLine(0, bordersWidth);
-    ImGui::Text("Data bytes");
-    ImGui::SameLine(0, dataBytesWidth - ImGui::CalcTextSize("Data bytes").x + bordersWidth);
-    ImGui::Text("Checksum");
-    ImGui::SameLine(0, bordersWidth);
-    ImGui::Text("Absolute time (s)");
-    ImGui::SameLine(0, bordersWidth);
-    ImGui::Text("Delta time (ms)");
-
-    MakeFrame(
-      "##identifier", {identifierWidth, -1},
-      [&]() {
-        for (int i = 0; i < 100; i++) {
-          ImGui::Text("%02X", 0xFF);
-        }
-      },
-      scrollbar);
-
-    MakeFrame(
-      "##length", {lengthWidth, -1},
-      [&]() {
-        for (int i = 0; i < 100; i++) {
-          ImGui::Text("%01X", 0xF);
-        }
-      },
-      scrollbar);
-
-    MakeFrame(
-      "##dataBytes", {dataBytesWidth, -1},
-      [&]() {
-        for (int i = 0; i < 100; i++) {
-          for (int j = 0; j < 8; j++) {
-            ImGui::Text("FF");
-            if (ImGui::IsItemClicked()) {
-              plotVisible = true;
-            }
-            ImGui::SameLine();
-            ImGui::Text(" ");
-            if (ImGui::IsItemHovered()) {
-              if (ImGui::BeginTooltip()) {
-                ImGui::Text("Interbyte delay (us): %.3f", 0);
-                ImGui::EndTooltip();
-              }
-            }
-            ImGui::SameLine();
-          }
-          ImGui::SameLine();
-          ImGui::SetCursorPosX(ImGui::GetWindowWidth() - ImGui::CalcTextSize("F").x * 8);
-          for (int j = 0; j < 8; j++) {
-            ImGui::Text("%c", '.');
-            if (j < 7) {
-              ImGui::SameLine();
-            }
-          }
-        }
-      },
-      scrollbar);
-
-    MakeFrame(
-      "##cks", {cksWidth, -1},
-      [&]() {
-        for (int i = 0; i < 100; i++) {
-          ImGui::Text("%02X", 0xFF);
-        }
-      },
-      scrollbar);
-
-    MakeFrame(
-      "##absTime", {absTimeWidth, -1},
-      [&]() {
-        for (int i = 0; i < 100; i++) {
-          ImGui::Text("%.6f", 10000.0);
-        }
-      },
-      scrollbar);
-
-    MakeFrame(
-      "##deltaTime", {deltaTimeWidth, -1},
-      [&]() {
-        for (int i = 0; i < 100; i++) {
-          ImGui::Text("%.6f", 10000.0);
-        }
-      },
-      scrollbar, true, true);
-
-    if (plotVisible) {
-      if (ImPlot::BeginPlot("Square wave")) {
-        static constexpr float time[] = {0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008};
-        static constexpr float bits[] = {1.f, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f, 0.f};
-        ImPlot::SetupAxisLimits(ImAxis_Y1, -0.3f, 1.3f);
-
-        ImPlot::PlotStairs("##squareWave", time, bits, 8);
-
-        ImPlot::EndPlot();
-      }
-
-      plotVisible = !ImGui::CloseButton(ImGui::GetID("Data View"), {ImGui::GetWindowSize().x - 40.f, 40.f});
+  MakeFrame("Identifier", [&]() {
+    for (int i = 0; i < 100; i++) {
+      ImGui::Text("%02X", 0xFF);
     }
+  });
 
-    ImGui::End();
+  MakeFrame("Length", [&]() {
+    for (int i = 0; i < 100; i++) {
+      ImGui::Text("%01X", 0xF);
+    }
+  });
+
+  MakeFrame("Data bytes", [&]() {
+    for (int i = 0; i < 100; i++) {
+      for (int j = 0; j < 8; j++) {
+        ImGui::Text("FF");
+        if (ImGui::IsItemClicked()) {
+          plotVisible = true;
+        }
+        ImGui::SameLine();
+        ImGui::Text(" ");
+        if (ImGui::IsItemHovered()) {
+          if (ImGui::BeginTooltip()) {
+            ImGui::Text("Interbyte delay (us): %.3f", 0);
+            ImGui::EndTooltip();
+          }
+        }
+        ImGui::SameLine();
+      }
+      ImGui::SameLine(ImGui::GetWindowWidth() - ((ImGui::CalcTextSize("F").x + style.ItemSpacing.x) * 8));
+      for (int j = 0; j < 8; j++) {
+        ImGui::Text("%c", '.');
+        if (j < 7) {
+          ImGui::SameLine();
+        }
+      }
+    }
+  });
+
+  MakeFrame("Checksum", [&]() {
+    for (int i = 0; i < 100; i++) {
+      ImGui::Text("%02X", 0xFF);
+    }
+  });
+
+  MakeFrame("Absolute time (s)", [&]() {
+    for (int i = 0; i < 100; i++) {
+      ImGui::Text("%.6f", 10000.0);
+    }
+  });
+
+  MakeFrame("Delta time (us)", [&]() {
+    for (int i = 0; i < 100; i++) {
+      ImGui::Text("%.6f", 10000.0);
+    }
+  });
+
+  if (plotVisible) {
+    MakeFrame(
+      "Square wave",
+      [&]() {
+        if (ImPlot::BeginPlot("##plotSquare")) {
+          static constexpr float time[] = {0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008};
+          static constexpr float bits[] = {1.f, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f, 0.f};
+          ImPlot::SetupAxisLimits(ImAxis_Y1, -0.3f, 1.3f);
+
+          ImPlot::PlotStairs("##squareWave", time, bits, 8);
+
+          ImPlot::EndPlot();
+        }
+      },
+      &plotVisible);
   }
 }
 
@@ -316,15 +263,16 @@ void Window::ShowLoading(LogicAnalyzer &logicAnalyzer) noexcept {
   ImGui::OpenPopup("Loading");
   if (ImGui::BeginPopupModal("Loading", nullptr,
                              ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-    ImGui::Text("Parsing %s...", logicAnalyzer.GetPath().c_str());
+    ImGui::Text("Parsing \"%s\"", logicAnalyzer.GetPath().string().c_str());
+    ImVec2 windowSize = ImGui::GetWindowSize();
+    ImGui::SetWindowPos({Width() / 2 - windowSize.x / 2, Height() / 2 - windowSize.y / 2});
     ImGui::EndPopup();
   }
 
   ShowMainMenuBar(logicAnalyzer);
 }
 
-template <size_t N>
-void Window::MakeCombo(const std::string &label, const std::array<std::string, N> &items) noexcept {
+const std::string &Window::MakeCombo(const std::string &label, const std::vector<std::string> &items) noexcept {
   int current = 0;
   if (ImGui::BeginCombo(label.c_str(), items[current].c_str())) {
     for (int i = 0; i < items.size(); i++) {
@@ -336,6 +284,36 @@ void Window::MakeCombo(const std::string &label, const std::array<std::string, N
     }
     ImGui::EndCombo();
   }
+
+  return items[current];
+}
+
+static inline AnalyzerSettings::ParityBitType StrToParity(const std::string &str) noexcept {
+  if (str == "None") {
+    return AnalyzerSettings::None;
+  } else if (str == "Even") {
+    return AnalyzerSettings::Even;
+  } else if (str == "Odd") {
+    return AnalyzerSettings::Odd;
+  }
+}
+
+static inline AnalyzerSettings::SignificantBitType StrToSignificantBit(const std::string &str) noexcept {
+  if (str == "LSB") {
+    return AnalyzerSettings::LSB;
+  } else if (str == "MSB") {
+    return AnalyzerSettings::MSB;
+  }
+}
+
+static inline float StrToStopBit(const std::string &str) noexcept {
+  if (str == "1.0") {
+    return 1.f;
+  } else if (str == "1.5") {
+    return 1.5f;
+  } else if (str == "2.0") {
+    return 2.f;
+  }
 }
 
 void Window::AskForFileAndLineSettings(LogicAnalyzer &logicAnalyzer) noexcept {
@@ -345,9 +323,9 @@ void Window::AskForFileAndLineSettings(LogicAnalyzer &logicAnalyzer) noexcept {
     ImGui::InputScalar("Bitrate", ImGuiDataType_U32, &logicAnalyzer.settings.bitrate);
     ImGui::InputScalar("Bits per frame", ImGuiDataType_U8, &logicAnalyzer.settings.bitsPerFrame);
 
-    MakeCombo("Stop bit", std::array<std::string, 3>{"1.0", "1.5", "2.0"});
-    MakeCombo("Parity bit", std::array<std::string, 3>{"None", "Even", "Odd"});
-    MakeCombo("Significant bit", std::array<std::string, 2>{"LSB", "MSB"});
+    logicAnalyzer.settings.stopBitType = StrToStopBit(MakeCombo("Stop bit", {"1.0", "1.5", "2.0"}));
+    logicAnalyzer.settings.parityBitType = StrToParity(MakeCombo("Parity bit", {"None", "Even", "Odd"}));
+    logicAnalyzer.settings.significantBitType = StrToSignificantBit(MakeCombo("Significant bit", {"LSB", "MSB"}));
 
     ImGui::Checkbox("Signal inversion", &logicAnalyzer.settings.signalInversion);
 

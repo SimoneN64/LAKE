@@ -2,6 +2,7 @@
 #include <SDL3/SDL.h>
 #include <functional>
 #include <Popup.hpp>
+#include <array>
 
 struct ImVec2;
 struct ImFont;
@@ -36,8 +37,7 @@ struct Window {
   [[nodiscard]] bool IsMinimized() const noexcept { return SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED; }
 
   void Render() const noexcept;
-  static void MakeFrame(const char *name, ImVec2 size, const std::function<void()> &func, float &scrollAmount,
-                        bool sameLine = true, bool scrollBar = false) noexcept;
+  void MakeFrame(const char *name, const std::function<void()> &func, bool *visible = nullptr) noexcept;
 
   void MainView(LogicAnalyzer &) noexcept;
   void ShowLoading(LogicAnalyzer &) noexcept;
@@ -46,8 +46,7 @@ struct Window {
   auto &GetPopupHandler() noexcept { return popupHandler; }
 
 private:
-  template <size_t N>
-  static void MakeCombo(const std::string &label, const std::array<std::string, N> &) noexcept;
+  static const std::string &MakeCombo(const std::string &label, const std::vector<std::string> &) noexcept;
   void ShowMainMenuBar(LogicAnalyzer &) noexcept;
   PopupHandler popupHandler;
   SDL_Window *window{};
@@ -58,4 +57,5 @@ private:
   float fontSize = 20.f, prevFontSize = fontSize;
   bool openSettings = false;
   float menuBarHeight = 0;
+  float scrollAmount = 0.f;
 };
