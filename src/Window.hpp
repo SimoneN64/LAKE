@@ -46,6 +46,8 @@ struct Window {
   auto &GetPopupHandler() noexcept { return popupHandler; }
 
 private:
+  template <size_t N>
+  static void MakeCombo(const std::string &label, const std::array<std::string, N> &) noexcept;
   void ShowMainMenuBar(LogicAnalyzer &) noexcept;
   PopupHandler popupHandler;
   SDL_Window *window{};

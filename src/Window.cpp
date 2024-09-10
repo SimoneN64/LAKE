@@ -316,33 +316,40 @@ void Window::ShowLoading(LogicAnalyzer &logicAnalyzer) noexcept {
   ImGui::OpenPopup("Loading");
   if (ImGui::BeginPopupModal("Loading", nullptr,
                              ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-    ImGui::Text("Parsing %s...", logicAnalyzer.GetPath());
+    ImGui::Text("Parsing %s...", logicAnalyzer.GetPath().c_str());
     ImGui::EndPopup();
   }
 
   ShowMainMenuBar(logicAnalyzer);
 }
 
+template <size_t N>
+void Window::MakeCombo(const std::string &label, const std::array<std::string, N> &items) noexcept {
+  int current = 0;
+  if (ImGui::BeginCombo(label.c_str(), items[current].c_str())) {
+    for (int i = 0; i < items.size(); i++) {
+      bool is_selected = (current == i);
+      if (ImGui::Selectable(items[i].c_str(), is_selected))
+        current = i;
+      if (is_selected)
+        ImGui::SetItemDefaultFocus();
+    }
+    ImGui::EndCombo();
+  }
+}
+
 void Window::AskForFileAndLineSettings(LogicAnalyzer &logicAnalyzer) noexcept {
   ImGui::OpenPopup("Load a file");
   if (ImGui::BeginPopupModal("Load a file", nullptr,
                              ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-    static const char* parity[] = {"None", "Even", "Odd "};
-    static int currParity = 0;
-    static const char *significantBit[] = {"LSB", "MSB"};
-    static int currSignificantBit = 0;
     ImGui::InputScalar("Bitrate", ImGuiDataType_U32, &logicAnalyzer.settings.bitrate);
     ImGui::InputScalar("Bits per frame", ImGuiDataType_U8, &logicAnalyzer.settings.bitsPerFrame);
-    ImGui::InputFloat("Stop bit type", &logicAnalyzer.settings.stopBitType);
-    if (ImGui::BeginCombo("Parity bit", parity[currParity])) {
-      ImGui::Combo("##parities", &currParity, parity, 3);
-      ImGui::EndCombo();
-    }
-    if (ImGui::BeginCombo("Significant bit", significantBit[currSignificantBit])) {
-      ImGui::Combo("##significantBits", &currSignificantBit, significantBit, 2);
-      ImGui::EndCombo();
-    }
-    ImGui::InputScalar("Signal inversion", ImGuiDataType_Bool, &logicAnalyzer.settings.signalInversion);
+
+    MakeCombo("Stop bit", std::array<std::string, 3>{"1.0", "1.5", "2.0"});
+    MakeCombo("Parity bit", std::array<std::string, 3>{"None", "Even", "Odd"});
+    MakeCombo("Significant bit", std::array<std::string, 2>{"LSB", "MSB"});
+
+    ImGui::Checkbox("Signal inversion", &logicAnalyzer.settings.signalInversion);
 
     if (ImGui::Button("Select file")) {
       logicAnalyzer.OpenDialog();
