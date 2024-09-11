@@ -122,9 +122,13 @@ void Window::Render() const noexcept {
 }
 
 void Window::MakeFrame(const char *name, const std::function<void()> &func, bool *visible) noexcept {
-  ImGui::SetNextWindowScroll({0.f, scrollAmount});
   ImGui::Begin(name, visible);
+  bool isHovered = ImGui::IsWindowHovered();
+  if (!isHovered) {
+    ImGui::SetScrollY(scrollAmount);
+  } else {
   scrollAmount = ImGui::GetScrollY();
+  }
   func();
   ImGui::End();
 }
