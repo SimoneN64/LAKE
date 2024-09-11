@@ -339,13 +339,14 @@ void Window::ShowLoading(LogicAnalyzer &logicAnalyzer) noexcept {
   if (ImGui::BeginPopupModal("Loading", nullptr,
                              ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
     ImGui::Text("Parsing \"%s\"", logicAnalyzer.GetPath().string().c_str());
+    ImGui::ProgressBar(-1.f * ImGui::GetTime());
     ImGui::EndPopup();
   }
 
   ShowMainMenuBar(logicAnalyzer);
 }
 
-const std::string &Window::MakeCombo(const std::string &label, const std::vector<std::string> &items) noexcept {
+static inline const std::string &MakeCombo(const std::string &label, const std::vector<std::string> &items) noexcept {
   int current = 0;
   if (ImGui::BeginCombo(label.c_str(), items[current].c_str())) {
     for (int i = 0; i < items.size(); i++) {

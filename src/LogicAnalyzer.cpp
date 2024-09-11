@@ -16,6 +16,14 @@ void LogicAnalyzer::OpenDialog() noexcept {
   OpenFile(outpath);
 }
 
+std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcept {
+  std::vector<LineData> result{};
+
+
+  isFinishedParsing = true;
+  return result;
+}
+
 void LogicAnalyzer::OpenFile(const fs::path &path) noexcept {
   file.open(path);
   if (!file.good() || !file.is_open()) {
@@ -52,12 +60,4 @@ CommunicationMode LogicAnalyzer::StrToCommMode(const std::string &param) noexcep
     return KLUNGO_EDC15;
 
   return INVALID;
-}
-
-std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcept {
-  std::vector<LineData> result{};
-
-  isFinishedParsing = true;
-
-  return result;
 }

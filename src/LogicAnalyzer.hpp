@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <cstdint>
 #include <vector>
+#include <thread>
 
 namespace fs = std::filesystem;
 
@@ -53,10 +54,21 @@ struct LineData {
 struct LogicAnalyzer {
   explicit LogicAnalyzer(PopupHandler &popupHandler) : popupHandler(popupHandler) {}
 
+  void test() {}
   void OpenDialog() noexcept;
   void OpenFile(const fs::path &path) noexcept;
-  std::vector<LineData> ParseFile(std::ifstream &inputFile) noexcept;
   auto &GetPath() const noexcept { return filePath; }
+  std::vector<LineData> ParseFile(std::ifstream &inputFile) noexcept;
+
+  void stopThread() {
+    if (parserThread.joinable())
+      parserThread.join();
+  }
+
+  void startThread() {
+    stopThread();
+    parserThread = std::thread([&]() { ParseFile(file); });
+  }
 
   CommunicationMode commMode = KSTDLUNGO;
 
@@ -66,6 +78,7 @@ struct LogicAnalyzer {
   std::atomic_bool errorParsing = false;
   bool fileIsLoaded = false;
   AnalyzerSettings settings{};
+  std::thread parserThread{};
 
 private:
   PopupHandler &popupHandler;

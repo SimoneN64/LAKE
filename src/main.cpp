@@ -28,10 +28,13 @@ int main() {
     window.NewFrame();
 
     if (logicAnalyzer.fileIsLoaded && window.fileIsConfirmed) {
-      if (logicAnalyzer.isFinishedParsing)
+      if (logicAnalyzer.isFinishedParsing) {
+        logicAnalyzer.stopThread();
         window.MainView(logicAnalyzer);
-      else
+      } else {
+        logicAnalyzer.startThread();
         window.ShowLoading(logicAnalyzer);
+      }
     } else {
       window.AskForFileAndLineSettings(logicAnalyzer);
     }

@@ -71,7 +71,6 @@ private:
     } error;
   };
   static JsonParseResult OpenOrCreateSettings();
-  static const std::string &MakeCombo(const std::string &label, const std::vector<std::string> &) noexcept;
   void ShowMainMenuBar(LogicAnalyzer &) noexcept;
   PopupHandler popupHandler;
   SDL_Window *window{};
