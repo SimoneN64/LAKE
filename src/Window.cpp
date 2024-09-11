@@ -407,6 +407,11 @@ void Window::AskForFileAndLineSettings(LogicAnalyzer &logicAnalyzer) noexcept {
       logicAnalyzer.OpenDialog();
     }
 
+    ImGui::SameLine();
+    ImGui::Text("%s",
+                logicAnalyzer.fileIsLoaded ? ("\"" + logicAnalyzer.GetPath().string() + "\"").c_str()
+                                           : std::string("No file selected").c_str());
+
     float size = ImGui::CalcTextSize("Analyze!").x + ImGui::GetStyle().FramePadding.x * 2.0f;
     float avail = ImGui::GetContentRegionAvail().x;
     float off = (avail - size) * 0.5f;

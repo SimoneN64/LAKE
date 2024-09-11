@@ -27,14 +27,14 @@ int main() {
 
     window.NewFrame();
 
-    //if (logicAnalyzer.fileIsLoaded && window.fileIsConfirmed) {
-    //  if (logicAnalyzer.isFinishedParsing)
+    if (logicAnalyzer.fileIsLoaded && window.fileIsConfirmed) {
+      if (logicAnalyzer.isFinishedParsing)
         window.MainView(logicAnalyzer);
-    //  else
-    //    window.ShowLoading(logicAnalyzer);
-    //} else {
-    //  window.AskForFileAndLineSettings(logicAnalyzer);
-    //}
+      else
+        window.ShowLoading(logicAnalyzer);
+    } else {
+      window.AskForFileAndLineSettings(logicAnalyzer);
+    }
 
     window.Render();
   }
