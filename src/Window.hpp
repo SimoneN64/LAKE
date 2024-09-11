@@ -77,7 +77,6 @@ private:
   SDL_Window *window{};
   SDL_GLContext glContext{};
   bool done = false;
-  bool themeDark = true;
   bool fontSizeChanged = false;
   float fontSize = 20.f, prevFontSize = fontSize;
   bool openSettings = false;

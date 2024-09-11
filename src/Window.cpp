@@ -113,7 +113,7 @@ Window::JsonParseResult Window::OpenOrCreateSettings() {
     file.seekg(0);
     auto json = nlohmann::json::parse(file, nullptr, false);
     file.close();
-    
+
     if (json.is_discarded()) {
       return {{}, JsonParseResult::ParseError};
     }
@@ -222,6 +222,7 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
   ShowMainMenuBar(logicAnalyzer);
 
   PopupHandler::MakePopup("Settings", &openSettings, [&]() {
+    static bool themeDark = theme == "dark";
     static bool themeChanged = themeDark;
     ImGui::Text("Style:");
     ImGui::SameLine(0, 2);
