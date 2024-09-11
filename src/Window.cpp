@@ -20,6 +20,27 @@ Window::~Window() noexcept {
 }
 
 Window::Window() noexcept {
+  auto settingsResult = OpenOrCreateSettings();
+
+  switch (settingsResult.error) {
+  case JsonParseResult::ParseError:
+    fmt::print("Failed to parse settings!\n");
+    fmt::print("Consider deleting the file \"settings.json\" you find next to the executable\n");
+    exit(1);
+    break;
+  case JsonParseResult::OpenError:
+    fmt::print("The settings file may be corrupted or incorrect!\n");
+    fmt::print("Consider deleting the file \"settings.json\" you find next to the executable\n");
+    exit(1);
+    break;
+  default:
+    break;
+  }
+
+  settings = settingsResult.json;
+  theme = settings["style"]["theme"].get<std::string>();
+  fontSize = settings["font"]["size"].get<float>();
+
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     fmt::print("Could not initialize video system! (SDL error: {})\n", SDL_GetError());
     errorState = VideoSystemFailure;
@@ -27,11 +48,11 @@ Window::Window() noexcept {
     return;
   }
 
-  const char *glsl_version = "#version 460";
+  const char *glsl_version = "#version 130";
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
@@ -64,7 +85,11 @@ Window::Window() noexcept {
   io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
   io.ConfigFlags |= ImGuiConfigFlags_IsSRGB;
 
-  ImGui::StyleColorsDark();
+  if (theme == "dark") {
+    ImGui::StyleColorsDark();
+  } else if (theme == "light") {
+    ImGui::StyleColorsLight();
+  }
 
   ImGuiStyle &style = ImGui::GetStyle();
 
@@ -76,6 +101,35 @@ Window::Window() noexcept {
 
   ImGui_ImplSDL3_InitForOpenGL(window, glContext);
   ImGui_ImplOpenGL3_Init(glsl_version);
+}
+
+Window::JsonParseResult Window::OpenOrCreateSettings() {
+  if (fs::exists("settings.json")) {
+    auto file = std::fstream("settings.json", std::fstream::in | std::fstream::out);
+    if (!nlohmann::json::accept(file)) {
+      return {{}, JsonParseResult::OpenError};
+    }
+
+    file.seekg(0);
+    auto json = nlohmann::json::parse(file, nullptr, false);
+    file.close();
+    
+    if (json.is_discarded()) {
+      return {{}, JsonParseResult::ParseError};
+    }
+
+    return {json, JsonParseResult::None};
+  }
+
+  auto file = std::fstream("settings.json", std::fstream::in | std::fstream::out | std::fstream::trunc);
+  nlohmann::json json;
+  json["style"]["theme"] = "dark";
+  json["font"]["size"] = 20.f;
+
+  file << json;
+  file.close();
+
+  return {json, JsonParseResult::None};
 }
 
 void Window::HandleEvents() noexcept {
@@ -91,6 +145,11 @@ void Window::NewFrame() noexcept {
   if (fontSizeChanged) {
     ImGuiIO &io = ImGui::GetIO();
     io.Fonts->Clear();
+
+    std::ofstream file("settings.json");
+    settings["font"]["size"] = fontSize;
+    file << settings;
+    file.close();
 
     io.Fonts->AddFontFromFileTTF("resources/FiraMono-Regular.ttf", fontSize);
     io.Fonts->AddFontFromFileTTF("resources/FiraMono-Bold.ttf", fontSize);
@@ -108,7 +167,7 @@ void Window::NewFrame() noexcept {
 void Window::Render() const noexcept {
   ImGui::Render();
   glViewport(0, 0, Width(), Height());
-  glClearColor(0.f, 0.f, 0.f, 0.f);
+  glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
   glClear(GL_COLOR_BUFFER_BIT);
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -163,6 +222,7 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
   ShowMainMenuBar(logicAnalyzer);
 
   PopupHandler::MakePopup("Settings", &openSettings, [&]() {
+    static bool themeChanged = themeDark;
     ImGui::Text("Style:");
     ImGui::SameLine(0, 2);
     if (ImGui::RadioButton("Dark", themeDark)) {
@@ -175,6 +235,15 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
     if (ImGui::RadioButton("Light", !themeDark)) {
       themeDark = false;
       ImGui::StyleColorsLight();
+    }
+
+    if (themeChanged != themeDark) {
+      themeChanged = themeDark;
+
+      std::ofstream file("settings.json");
+      settings["style"]["theme"] = themeDark ? "dark" : "light";
+      file << settings;
+      file.close();
     }
 
     ImGui::SliderFloat("Font size:", &fontSize, 4.f, 96.f, "%.0f");

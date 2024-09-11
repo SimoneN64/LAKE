@@ -1,8 +1,10 @@
 #pragma once
+#include <nlohmann/json.hpp>
 #include <SDL3/SDL.h>
 #include <functional>
 #include <Popup.hpp>
 #include <array>
+#include <fstream>
 
 struct ImVec2;
 struct ImFont;
@@ -60,6 +62,15 @@ struct Window {
   bool fileIsConfirmed = false;
 
 private:
+  struct JsonParseResult {
+    nlohmann::json json;
+    enum {
+      None,
+      ParseError,
+      OpenError,
+    } error;
+  };
+  static JsonParseResult OpenOrCreateSettings();
   static const std::string &MakeCombo(const std::string &label, const std::vector<std::string> &) noexcept;
   void ShowMainMenuBar(LogicAnalyzer &) noexcept;
   PopupHandler popupHandler;
@@ -71,4 +82,6 @@ private:
   float fontSize = 20.f, prevFontSize = fontSize;
   bool openSettings = false;
   float scrollAmount = 0.f;
+  std::string theme = "dark";
+  nlohmann::json settings{};
 };
