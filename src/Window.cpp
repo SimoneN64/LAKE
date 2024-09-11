@@ -127,7 +127,7 @@ void Window::MakeFrame(const char *name, const std::function<void()> &func, bool
   if (!isHovered) {
     ImGui::SetScrollY(scrollAmount);
   } else {
-  scrollAmount = ImGui::GetScrollY();
+    scrollAmount = ImGui::GetScrollY();
   }
   func();
   ImGui::End();
@@ -336,6 +336,15 @@ void Window::AskForFileAndLineSettings(LogicAnalyzer &logicAnalyzer) noexcept {
     if (ImGui::Button("Select file")) {
       logicAnalyzer.OpenDialog();
     }
+
+    float size = ImGui::CalcTextSize("Analyze!").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+    float avail = ImGui::GetContentRegionAvail().x;
+    float off = (avail - size) * 0.5f;
+
+    if (off > 0.0f)
+      ImGui::SetCursorPosX(ImGui::GetCursorPosX() + off);
+
+    fileIsConfirmed = ImGui::Button("Analyze!");
 
     ImGui::EndPopup();
   }

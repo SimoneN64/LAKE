@@ -27,7 +27,7 @@ int main() {
 
     window.NewFrame();
 
-    if (logicAnalyzer.fileIsLoaded) {
+    if (logicAnalyzer.fileIsLoaded && window.fileIsConfirmed) {
       if (logicAnalyzer.isFinishedParsing)
         window.MainView(logicAnalyzer);
       else

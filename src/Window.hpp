@@ -57,6 +57,8 @@ struct Window {
 
   auto &GetPopupHandler() noexcept { return popupHandler; }
 
+  bool fileIsConfirmed = false;
+
 private:
   static const std::string &MakeCombo(const std::string &label, const std::vector<std::string> &) noexcept;
   void ShowMainMenuBar(LogicAnalyzer &) noexcept;
