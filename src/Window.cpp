@@ -334,6 +334,8 @@ void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
 }
 
 void Window::ShowLoading(LogicAnalyzer &logicAnalyzer) noexcept {
+  popupHandler.RunPopups();
+
   ImGui::OpenPopup("Loading");
   ImGui::SetNextWindowPos({PosX() + Width() / 2.f, PosY() + Height() / 2.f}, 0, {0.5f, 0.5f});
   if (ImGui::BeginPopupModal("Loading", nullptr,
@@ -391,6 +393,8 @@ static inline float StrToStopBit(const std::string &str) noexcept {
 }
 
 void Window::AskForFileAndLineSettings(LogicAnalyzer &logicAnalyzer) noexcept {
+  popupHandler.RunPopups();
+
   ImGui::OpenPopup("Load a file");
   ImGui::SetNextWindowPos({PosX() + Width() / 2.f, PosY() + Height() / 2.f}, 0, {0.5f, 0.5f});
   if (ImGui::BeginPopupModal("Load a file", nullptr,
@@ -410,8 +414,8 @@ void Window::AskForFileAndLineSettings(LogicAnalyzer &logicAnalyzer) noexcept {
 
     ImGui::SameLine();
     ImGui::Text("%s",
-                logicAnalyzer.fileIsLoaded ? ("\"" + logicAnalyzer.GetPath().string() + "\"").c_str()
-                                           : std::string("No file selected").c_str());
+                logicAnalyzer.fileIsSelected ? ("\"" + logicAnalyzer.GetPath().string() + "\"").c_str()
+                                             : std::string("No file selected").c_str());
 
     float size = ImGui::CalcTextSize("Analyze!").x + ImGui::GetStyle().FramePadding.x * 2.0f;
     float avail = ImGui::GetContentRegionAvail().x;

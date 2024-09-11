@@ -27,13 +27,17 @@ int main() {
 
     window.NewFrame();
 
-    if (logicAnalyzer.fileIsLoaded && window.fileIsConfirmed) {
+    if (window.fileIsConfirmed) {
       if (logicAnalyzer.isFinishedParsing) {
         logicAnalyzer.stopThread();
         window.MainView(logicAnalyzer);
       } else {
         logicAnalyzer.startThread();
-        window.ShowLoading(logicAnalyzer);
+        if (!logicAnalyzer.errorParsing && logicAnalyzer.fileIsSelected) {
+          window.ShowLoading(logicAnalyzer);
+        } else {
+          window.fileIsConfirmed = false;
+        }
       }
     } else {
       window.AskForFileAndLineSettings(logicAnalyzer);

@@ -2,6 +2,7 @@
 #include <fmt/core.h>
 #include <LogicAnalyzer.hpp>
 #include <Popup.hpp>
+#include <unarr.h>
 
 void LogicAnalyzer::OpenDialog() noexcept {
   nfdchar_t *outpath;
@@ -13,26 +14,49 @@ void LogicAnalyzer::OpenDialog() noexcept {
     return;
   }
 
-  OpenFile(outpath);
+  filePath = outpath;
+  fileIsSelected = true;
 }
 
 std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcept {
   std::vector<LineData> result{};
 
+  auto stream = ar_open_file(filePath.string().c_str());
 
-  isFinishedParsing = true;
-  return result;
-}
-
-void LogicAnalyzer::OpenFile(const fs::path &path) noexcept {
-  file.open(path);
-  if (!file.good() || !file.is_open()) {
-    popupHandler.ScheduleErrorPopup("An error occurred", fmt::format("Could not open {}\n", path.string()));
-    return;
+  if (!stream) {
+    errorParsing = true;
+    isFinishedParsing = false;
+    fileIsSelected = false;
+    popupHandler.ScheduleErrorPopup("An error occurred",
+                                    fmt::format("Could not open {}. Error: {}\n", filePath.string(), NFD::GetError()));
+    return {};
   }
 
-  fileIsLoaded = true;
-  filePath = path;
+
+  ar_archive *archive = ar_open_zip_archive(stream, false);
+
+  if (!archive)
+    archive = ar_open_rar_archive(stream);
+  if (!archive)
+    archive = ar_open_7z_archive(stream);
+  if (!archive)
+    archive = ar_open_tar_archive(stream);
+
+  if (!archive) {
+    ar_close(stream);
+    errorParsing = true;
+    isFinishedParsing = false;
+    fileIsSelected = false;
+    popupHandler.ScheduleErrorPopup("An error occurred",
+                                    fmt::format("Could not open {}. Error: {}\n", filePath.string(), NFD::GetError()));
+    return {};
+  }
+
+  isFinishedParsing = true;
+
+  ar_close_archive(archive);
+  ar_close(stream);
+  return result;
 }
 
 CommunicationMode LogicAnalyzer::StrToCommMode(const std::string &param) noexcept {

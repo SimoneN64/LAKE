@@ -53,10 +53,10 @@ struct LineData {
 
 struct LogicAnalyzer {
   explicit LogicAnalyzer(PopupHandler &popupHandler) : popupHandler(popupHandler) {}
+  ~LogicAnalyzer() { stopThread(); }
 
   void test() {}
   void OpenDialog() noexcept;
-  void OpenFile(const fs::path &path) noexcept;
   auto &GetPath() const noexcept { return filePath; }
   std::vector<LineData> ParseFile(std::ifstream &inputFile) noexcept;
 
@@ -76,7 +76,7 @@ struct LogicAnalyzer {
 
   std::atomic_bool isFinishedParsing = false;
   std::atomic_bool errorParsing = false;
-  bool fileIsLoaded = false;
+  bool fileIsSelected = false;
   AnalyzerSettings settings{};
   std::thread parserThread{};
 
