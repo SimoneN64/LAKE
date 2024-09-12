@@ -217,135 +217,135 @@ void Window::ShowMainMenuBar(LogicAnalyzer &logicAnalyzer) noexcept {
 }
 
 void Window::MainView(LogicAnalyzer &logicAnalyzer) noexcept {
-  popupHandler.RunPopups();
-
-  ShowMainMenuBar(logicAnalyzer);
-
-  PopupHandler::MakePopup("Settings", &openSettings, [&]() {
-    static bool themeDark = theme == "dark";
-    static bool themeChanged = themeDark;
-    ImGui::Text("Style:");
-    ImGui::SameLine(0, 2);
-    if (ImGui::RadioButton("Dark", themeDark)) {
-      themeDark = true;
-      ImGui::StyleColorsDark();
-    }
-
-    ImGui::SameLine();
-
-    if (ImGui::RadioButton("Light", !themeDark)) {
-      themeDark = false;
-      ImGui::StyleColorsLight();
-    }
-
-    if (themeChanged != themeDark) {
-      themeChanged = themeDark;
-
-      std::ofstream file("settings.json");
-      settings["style"]["theme"] = themeDark ? "dark" : "light";
-      file << settings;
-      file.close();
-    }
-
-    ImGui::SliderFloat("Font size:", &fontSize, 4.f, 96.f, "%.0f");
-    if (fontSize != prevFontSize) {
-      fontSizeChanged = true;
-      prevFontSize = fontSize;
-    }
-  });
-
-  auto style = ImGui::GetStyle();
-  static auto scrollbar = 0.f;
-  static bool plotVisible = false;
-
-  MakeFrame("Identifier", [&]() {
-    for (int i = 0; i < 100; i++) {
-      ImGui::Text("%02X", 0xFF);
-    }
-  });
-
-  MakeFrame("Length", [&]() {
-    for (int i = 0; i < 100; i++) {
-      ImGui::Text("%01X", 0xF);
-    }
-  });
-
-  MakeFrame("Data bytes", [&]() {
-    for (int i = 0; i < 100; i++) {
-      for (int j = 0; j < 8; j++) {
-        ImGui::Text("FF");
-        if (ImGui::IsItemClicked()) {
-          plotVisible = true;
-        }
-        ImGui::SameLine();
-        ImGui::Text(" ");
-        if (ImGui::IsItemHovered()) {
-          if (ImGui::BeginTooltip()) {
-            ImGui::Text("Interbyte delay (us): %.3f", 0);
-            ImGui::EndTooltip();
-          }
-        }
-        ImGui::SameLine();
+  if (!popupHandler.RunPopups()) {
+    popupHandler.MakePopup("Settings", &openSettings, [&]() {
+      static bool themeDark = theme == "dark";
+      static bool themeChanged = themeDark;
+      ImGui::Text("Style:");
+      ImGui::SameLine(0, 2);
+      if (ImGui::RadioButton("Dark", themeDark)) {
+        themeDark = true;
+        ImGui::StyleColorsDark();
       }
-      ImGui::SameLine(ImGui::GetWindowWidth() - ((ImGui::CalcTextSize("F").x + style.ItemSpacing.x) * 8));
-      for (int j = 0; j < 8; j++) {
-        ImGui::Text("%c", '.');
-        if (j < 7) {
+
+      ImGui::SameLine();
+
+      if (ImGui::RadioButton("Light", !themeDark)) {
+        themeDark = false;
+        ImGui::StyleColorsLight();
+      }
+
+      if (themeChanged != themeDark) {
+        themeChanged = themeDark;
+
+        std::ofstream file("settings.json");
+        settings["style"]["theme"] = themeDark ? "dark" : "light";
+        file << settings;
+        file.close();
+      }
+
+      ImGui::SliderFloat("Font size:", &fontSize, 4.f, 96.f, "%.0f");
+      if (fontSize != prevFontSize) {
+        fontSizeChanged = true;
+        prevFontSize = fontSize;
+      }
+    });
+
+    auto style = ImGui::GetStyle();
+    static auto scrollbar = 0.f;
+    static bool plotVisible = false;
+
+    MakeFrame("Identifier", [&]() {
+      for (int i = 0; i < 100; i++) {
+        ImGui::Text("%02X", 0xFF);
+      }
+    });
+
+    MakeFrame("Length", [&]() {
+      for (int i = 0; i < 100; i++) {
+        ImGui::Text("%01X", 0xF);
+      }
+    });
+
+    MakeFrame("Data bytes", [&]() {
+      for (int i = 0; i < 100; i++) {
+        for (int j = 0; j < 8; j++) {
+          ImGui::Text("FF");
+          if (ImGui::IsItemClicked()) {
+            plotVisible = true;
+          }
+          ImGui::SameLine();
+          ImGui::Text(" ");
+          if (ImGui::IsItemHovered()) {
+            if (ImGui::BeginTooltip()) {
+              ImGui::Text("Interbyte delay (us): %.3f", 0);
+              ImGui::EndTooltip();
+            }
+          }
           ImGui::SameLine();
         }
-      }
-    }
-  });
-
-  MakeFrame("Checksum", [&]() {
-    for (int i = 0; i < 100; i++) {
-      ImGui::Text("%02X", 0xFF);
-    }
-  });
-
-  MakeFrame("Absolute time (s)", [&]() {
-    for (int i = 0; i < 100; i++) {
-      ImGui::Text("%.6f", 10000.0);
-    }
-  });
-
-  MakeFrame("Delta time (us)", [&]() {
-    for (int i = 0; i < 100; i++) {
-      ImGui::Text("%.6f", 10000.0);
-    }
-  });
-
-  if (plotVisible) {
-    MakeFrame(
-      "Square wave",
-      [&]() {
-        if (ImPlot::BeginPlot("##plotSquare")) {
-          static constexpr float time[] = {0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008};
-          static constexpr float bits[] = {1.f, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f, 0.f};
-          ImPlot::SetupAxisLimits(ImAxis_Y1, -0.3f, 1.3f);
-
-          ImPlot::PlotStairs("##squareWave", time, bits, 8);
-
-          ImPlot::EndPlot();
+        ImGui::SameLine(ImGui::GetWindowWidth() - ((ImGui::CalcTextSize("F").x + style.ItemSpacing.x) * 8));
+        for (int j = 0; j < 8; j++) {
+          ImGui::Text("%c", '.');
+          if (j < 7) {
+            ImGui::SameLine();
+          }
         }
-      },
-      &plotVisible);
+      }
+    });
+
+    MakeFrame("Checksum", [&]() {
+      for (int i = 0; i < 100; i++) {
+        ImGui::Text("%02X", 0xFF);
+      }
+    });
+
+    MakeFrame("Absolute time (s)", [&]() {
+      for (int i = 0; i < 100; i++) {
+        ImGui::Text("%.6f", 10000.0);
+      }
+    });
+
+    MakeFrame("Delta time (us)", [&]() {
+      for (int i = 0; i < 100; i++) {
+        ImGui::Text("%.6f", 10000.0);
+      }
+    });
+
+    if (plotVisible) {
+      MakeFrame(
+        "Square wave",
+        [&]() {
+          if (ImPlot::BeginPlot("##plotSquare")) {
+            static constexpr float time[] = {0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008};
+            static constexpr float bits[] = {1.f, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f, 0.f};
+            ImPlot::SetupAxisLimits(ImAxis_Y1, -0.3f, 1.3f);
+
+            ImPlot::PlotStairs("##squareWave", time, bits, 8);
+
+            ImPlot::EndPlot();
+          }
+        },
+        &plotVisible);
+    }
   }
+  ShowMainMenuBar(logicAnalyzer);
 }
 
 void Window::ShowLoading(LogicAnalyzer &logicAnalyzer) noexcept {
-  popupHandler.RunPopups();
+  if (!popupHandler.RunPopups()) {
+    ImGui::OpenPopup("Loading");
+    ImGui::SetNextWindowPos({PosX() + Width() / 2.f, PosY() + Height() / 2.f}, 0, {0.5f, 0.5f});
+    if (ImGui::BeginPopupModal("Loading", nullptr,
+                               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize |
+                                 ImGuiWindowFlags_NoMove)) {
+      ImGui::Text("Parsing \"%s\"", logicAnalyzer.GetPath().string().c_str());
+      ImGui::ProgressBar(-1.f * ImGui::GetTime());
+      ImGui::EndPopup();
+    }
 
-  ImGui::OpenPopup("Loading");
-  ImGui::SetNextWindowPos({PosX() + Width() / 2.f, PosY() + Height() / 2.f}, 0, {0.5f, 0.5f});
-  if (ImGui::BeginPopupModal("Loading", nullptr,
-                             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-    ImGui::Text("Parsing \"%s\"", logicAnalyzer.GetPath().string().c_str());
-    ImGui::ProgressBar(-1.f * ImGui::GetTime());
-    ImGui::EndPopup();
+    ShowMainMenuBar(logicAnalyzer);
   }
-
-  ShowMainMenuBar(logicAnalyzer);
 }
 
 static inline const std::string &MakeCombo(const std::string &label, const std::vector<std::string> &items) noexcept {
@@ -393,41 +393,48 @@ static inline float StrToStopBit(const std::string &str) noexcept {
 }
 
 void Window::AskForFileAndLineSettings(LogicAnalyzer &logicAnalyzer) noexcept {
-  ImGui::OpenPopup("Load a file");
-  ImGui::SetNextWindowPos({PosX() + Width() / 2.f, PosY() + Height() / 2.f}, 0, {0.5f, 0.5f});
-  if (ImGui::BeginPopupModal("Load a file", nullptr,
-                             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-    ImGui::InputScalar("Bitrate", ImGuiDataType_U32, &logicAnalyzer.settings.bitrate);
-    ImGui::InputScalar("Bits per frame", ImGuiDataType_U8, &logicAnalyzer.settings.bitsPerFrame);
+  if (!popupHandler.RunPopups()) {
+    ImGui::OpenPopup("Load a file");
+    ImGui::SetNextWindowPos({PosX() + Width() / 2.f, PosY() + Height() / 2.f}, 0, {0.5f, 0.5f});
+    if (ImGui::BeginPopupModal("Load a file", nullptr,
+                               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize |
+                                 ImGuiWindowFlags_NoMove)) {
+      ImGui::InputScalar("Bitrate", ImGuiDataType_U32, &logicAnalyzer.settings.bitrate);
+      ImGui::InputScalar("Bits per frame", ImGuiDataType_U8, &logicAnalyzer.settings.bitsPerFrame);
 
-    logicAnalyzer.settings.stopBitType = StrToStopBit(MakeCombo("Stop bit", {"1.0", "1.5", "2.0"}));
-    logicAnalyzer.settings.parityBitType = StrToParity(MakeCombo("Parity bit", {"None", "Even", "Odd"}));
-    logicAnalyzer.settings.significantBitType = StrToSignificantBit(MakeCombo("Significant bit", {"LSB", "MSB"}));
+      logicAnalyzer.settings.stopBitType = StrToStopBit(MakeCombo("Stop bit", {"1.0", "1.5", "2.0"}));
+      logicAnalyzer.settings.parityBitType = StrToParity(MakeCombo("Parity bit", {"None", "Even", "Odd"}));
+      logicAnalyzer.settings.significantBitType = StrToSignificantBit(MakeCombo("Significant bit", {"LSB", "MSB"}));
 
-    ImGui::Checkbox("Signal inversion", &logicAnalyzer.settings.signalInversion);
+      ImGui::Checkbox("Signal inversion", &logicAnalyzer.settings.signalInversion);
 
-    if (ImGui::Button("Select file")) {
-      logicAnalyzer.OpenDialog();
+      if (ImGui::Button("Select file")) {
+        logicAnalyzer.OpenDialog();
+      }
+
+      ImGui::SameLine();
+      if (logicAnalyzer.state == LogicAnalyzer::None) {
+        ImGui::Text("%s", std::string("No file selected").c_str());
+      } else {
+        ImGui::Text("%s", ("\"" + logicAnalyzer.GetPath().string() + "\"").c_str());
+      }
+
+      float size = ImGui::CalcTextSize("Analyze!").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+      float avail = ImGui::GetContentRegionAvail().x;
+      float off = (avail - size) * 0.5f;
+
+      if (off > 0.0f)
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + off);
+
+      ImGui::BeginDisabled(logicAnalyzer.state == LogicAnalyzer::FileOpenError);
+      if (ImGui::Button("Analyze!")) {
+        logicAnalyzer.state = LogicAnalyzer::FileConfirmed;
+      }
+      ImGui::EndDisabled();
+
+      ImGui::EndPopup();
     }
-
-    ImGui::SameLine();
-    ImGui::Text("%s",
-                (logicAnalyzer.state == LogicAnalyzer::FileSelected)
-                  ? ("\"" + logicAnalyzer.GetPath().string() + "\"").c_str()
-                  : std::string("No file selected").c_str());
-
-    float size = ImGui::CalcTextSize("Analyze!").x + ImGui::GetStyle().FramePadding.x * 2.0f;
-    float avail = ImGui::GetContentRegionAvail().x;
-    float off = (avail - size) * 0.5f;
-
-    if (off > 0.0f)
-      ImGui::SetCursorPosX(ImGui::GetCursorPosX() + off);
-
-    logicAnalyzer.state = ImGui::Button("Analyze!") ? LogicAnalyzer::FileConfirmed : LogicAnalyzer::FileSelected;
-
-    ImGui::EndPopup();
   }
 
   ShowMainMenuBar(logicAnalyzer);
-  popupHandler.RunPopups();
 }

@@ -30,8 +30,14 @@ int main() {
     switch (logicAnalyzer.state) {
       case LogicAnalyzer::None:
       case LogicAnalyzer::FileSelected:
-      case LogicAnalyzer::ParseError:
         window.AskForFileAndLineSettings(logicAnalyzer);
+        break;
+      case LogicAnalyzer::ParseError:
+        logicAnalyzer.stopThread();
+        logicAnalyzer.state = LogicAnalyzer::None;
+        break;
+      case LogicAnalyzer::FileOpenError:
+        logicAnalyzer.state = LogicAnalyzer::None;
         break;
       case LogicAnalyzer::FileConfirmed:
         logicAnalyzer.startThread();

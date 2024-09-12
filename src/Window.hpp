@@ -70,7 +70,7 @@ private:
   };
   static JsonParseResult OpenOrCreateSettings();
   void ShowMainMenuBar(LogicAnalyzer &) noexcept;
-  PopupHandler popupHandler;
+  PopupHandler popupHandler{*this};
   SDL_Window *window{};
   SDL_GLContext glContext{};
   bool done = false;

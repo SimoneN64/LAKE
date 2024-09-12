@@ -1,5 +1,4 @@
 #pragma once
-#include <algorithm>
 #include <functional>
 #include <imgui.h>
 #include <string>
@@ -8,41 +7,20 @@
 struct PopupData {
   std::string title;
   std::string message;
+  std::function<void()> impl = nullptr;
   bool open = false;
 };
 
+struct Window;
+
 struct PopupHandler {
-  void ScheduleErrorPopup(const std::string &title, const std::string &msg) noexcept {
-    popups.push_back({title, msg, true});
-  }
-
-  void RunPopups() noexcept {
-    for (auto &popup : popups) {
-      MakePopup(popup.title.c_str(), &popup.open, popup.message.c_str());
-    }
-
-    std::erase_if(popups, [](const PopupData &data) { return !data.open; });
-  }
-
-  static void MakePopup(const char *title, bool *open, const char *message) noexcept {
-    if (*open) {
-      ImGui::OpenPopup(title);
-      if (ImGui::BeginPopupModal(title, open)) {
-        ImGui::Text(message);
-        ImGui::EndPopup();
-      }
-    }
-  }
-
-  static void MakePopup(const char *title, bool *open, const std::function<void()> &impl) noexcept {
-    if (*open) {
-      ImGui::OpenPopup(title);
-      if (ImGui::BeginPopupModal(title, open)) {
-        impl();
-        ImGui::EndPopup();
-      }
-    }
-  }
+  PopupHandler(Window &window) : window(window) {}
+  void ScheduleErrorPopup(const std::string &title, const std::string &msg) noexcept;
+  void ScheduleErrorPopup(const std::string &title, const std::function<void()> &impl) noexcept;
+  bool RunPopups() noexcept;
+  void MakePopup(const char *title, bool *open, const char *message) const noexcept;
+  void MakePopup(const char *title, bool *open, const std::function<void()> &impl) const noexcept;
 
   std::vector<PopupData> popups;
+  Window &window;
 };

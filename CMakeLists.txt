@@ -14,7 +14,8 @@ add_subdirectory(external/nfd nfd)
 
 add_executable(lake src/main.cpp src/Window.cpp
   src/LogicAnalyzer.hpp
-  src/LogicAnalyzer.cpp)
+  src/LogicAnalyzer.cpp
+  src/Popup.cpp)
 
 target_include_directories(lake PRIVATE src external/json/include external/implot external/imgui external/imgui/backends)
 target_link_libraries(lake PRIVATE unarr nlohmann_json fmt::fmt SDL3::SDL3 SDL3::SDL3-static implot imgui nfd)

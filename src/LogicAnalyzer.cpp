@@ -3,15 +3,17 @@
 #include <LogicAnalyzer.hpp>
 #include <Popup.hpp>
 #include <unarr.h>
-#include <mutex>
 
 void LogicAnalyzer::OpenDialog() noexcept {
+  state = None;
+
   nfdchar_t *outpath;
   constexpr nfdfilteritem_t filters[] = {{"Saleae project file", "sal"}, {"DSView project file", "dsl"}};
   auto result = NFD::OpenDialog(outpath, filters, 2);
   if (result == NFD_ERROR) {
-    popupHandler.ScheduleErrorPopup("An error occurred",
-                                    fmt::format("Could not open {}. Error: {}\n", outpath, NFD::GetError()));
+    MakePopupError("An error occurred",
+                    fmt::format("Could not open {}. Error: {}\n", outpath, NFD::GetError()),
+                    FileOpenError);
     return;
   }
 
@@ -19,10 +21,11 @@ void LogicAnalyzer::OpenDialog() noexcept {
   state = FileSelected;
 }
 
-void LogicAnalyzer::MakePopupErrorParsing(const std::string& title, const std::string& msg) {
+void LogicAnalyzer::MakePopupError(const std::string& title, const std::string& msg, LogicAnalyzer::State newState) {
   std::mutex m;
   std::lock_guard guard(m);
-  state = ParseError;
+  state = newState;
+  filePath.clear();
   popupHandler.ScheduleErrorPopup(title, msg);
 }
 
@@ -32,11 +35,11 @@ std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcep
   auto stream = ar_open_file(filePath.string().c_str());
 
   if (!stream) {
-    MakePopupErrorParsing("An error occurred",
-      fmt::format("Could not open {}. Error: {}\n", filePath.string(), NFD::GetError()));
+    MakePopupError("An error occurred",
+      fmt::format("Could not open {}. Error opening archive\n", filePath.string()),
+      FileOpenError);
     return {};
   }
-
 
   ar_archive *archive = ar_open_zip_archive(stream, false);
 
@@ -49,8 +52,9 @@ std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcep
 
   if (!archive) {
     ar_close(stream);
-    MakePopupErrorParsing("An error occurred",
-      fmt::format("Could not open {}. Error: {}\n", filePath.string(), NFD::GetError()));
+    MakePopupError("An error occurred",
+      fmt::format("Could not open {}. Error unzipping file. Is this a valid Saleae or DSLogic project?\n", filePath.string()),
+      FileOpenError);
     return {};
   }
 

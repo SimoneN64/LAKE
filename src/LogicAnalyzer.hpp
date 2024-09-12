@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <vector>
 #include <thread>
+#include <mutex>
 
 namespace fs = std::filesystem;
 
@@ -58,6 +59,7 @@ struct LogicAnalyzer {
   void test() {}
   void OpenDialog() noexcept;
   auto &GetPath() const noexcept { return filePath; }
+
   std::vector<LineData> ParseFile(std::ifstream &inputFile) noexcept;
 
   void stopThread() {
@@ -76,10 +78,11 @@ struct LogicAnalyzer {
 
   enum State {
     None,
+    FileOpenError,
     FileSelected,
     FileConfirmed,
+    ParseError,
     FileParsed,
-    ParseError
   };
 
   std::atomic<State> state = None;
@@ -87,7 +90,7 @@ struct LogicAnalyzer {
   std::thread parserThread{};
 
 private:
-  void MakePopupErrorParsing(const std::string& title, const std::string& msg);
+  void MakePopupError(const std::string& title, const std::string& msg, State newState);
 
   PopupHandler &popupHandler;
   std::ifstream file{};
