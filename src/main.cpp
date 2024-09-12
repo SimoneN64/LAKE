@@ -27,20 +27,20 @@ int main() {
 
     window.NewFrame();
 
-    if (window.fileIsConfirmed) {
-      if (logicAnalyzer.isFinishedParsing) {
+    switch (logicAnalyzer.state) {
+      case LogicAnalyzer::None:
+      case LogicAnalyzer::FileSelected:
+      case LogicAnalyzer::ParseError:
+        window.AskForFileAndLineSettings(logicAnalyzer);
+        break;
+      case LogicAnalyzer::FileConfirmed:
+        logicAnalyzer.startThread();
+        window.ShowLoading(logicAnalyzer);
+        break;
+      case LogicAnalyzer::FileParsed:
         logicAnalyzer.stopThread();
         window.MainView(logicAnalyzer);
-      } else {
-        logicAnalyzer.startThread();
-        if (!logicAnalyzer.errorParsing && logicAnalyzer.fileIsSelected) {
-          window.ShowLoading(logicAnalyzer);
-        } else {
-          window.fileIsConfirmed = false;
-        }
-      }
-    } else {
-      window.AskForFileAndLineSettings(logicAnalyzer);
+        break;
     }
 
     window.Render();

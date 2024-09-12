@@ -74,13 +74,21 @@ struct LogicAnalyzer {
 
   static CommunicationMode StrToCommMode(const std::string &param) noexcept;
 
-  std::atomic_bool isFinishedParsing = false;
-  std::atomic_bool errorParsing = false;
-  bool fileIsSelected = false;
+  enum State {
+    None,
+    FileSelected,
+    FileConfirmed,
+    FileParsed,
+    ParseError
+  };
+
+  std::atomic<State> state = None;
   AnalyzerSettings settings{};
   std::thread parserThread{};
 
 private:
+  void MakePopupErrorParsing(const std::string& title, const std::string& msg);
+
   PopupHandler &popupHandler;
   std::ifstream file{};
   fs::path filePath{};

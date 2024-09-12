@@ -59,8 +59,6 @@ struct Window {
 
   auto &GetPopupHandler() noexcept { return popupHandler; }
 
-  bool fileIsConfirmed = false;
-
 private:
   struct JsonParseResult {
     nlohmann::json json;

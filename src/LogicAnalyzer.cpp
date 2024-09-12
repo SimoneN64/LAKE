@@ -3,6 +3,7 @@
 #include <LogicAnalyzer.hpp>
 #include <Popup.hpp>
 #include <unarr.h>
+#include <mutex>
 
 void LogicAnalyzer::OpenDialog() noexcept {
   nfdchar_t *outpath;
@@ -15,7 +16,14 @@ void LogicAnalyzer::OpenDialog() noexcept {
   }
 
   filePath = outpath;
-  fileIsSelected = true;
+  state = FileSelected;
+}
+
+void LogicAnalyzer::MakePopupErrorParsing(const std::string& title, const std::string& msg) {
+  std::mutex m;
+  std::lock_guard guard(m);
+  state = ParseError;
+  popupHandler.ScheduleErrorPopup(title, msg);
 }
 
 std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcept {
@@ -24,11 +32,8 @@ std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcep
   auto stream = ar_open_file(filePath.string().c_str());
 
   if (!stream) {
-    errorParsing = true;
-    isFinishedParsing = false;
-    fileIsSelected = false;
-    popupHandler.ScheduleErrorPopup("An error occurred",
-                                    fmt::format("Could not open {}. Error: {}\n", filePath.string(), NFD::GetError()));
+    MakePopupErrorParsing("An error occurred",
+      fmt::format("Could not open {}. Error: {}\n", filePath.string(), NFD::GetError()));
     return {};
   }
 
@@ -44,15 +49,12 @@ std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcep
 
   if (!archive) {
     ar_close(stream);
-    errorParsing = true;
-    isFinishedParsing = false;
-    fileIsSelected = false;
-    popupHandler.ScheduleErrorPopup("An error occurred",
-                                    fmt::format("Could not open {}. Error: {}\n", filePath.string(), NFD::GetError()));
+    MakePopupErrorParsing("An error occurred",
+      fmt::format("Could not open {}. Error: {}\n", filePath.string(), NFD::GetError()));
     return {};
   }
 
-  isFinishedParsing = true;
+  state = FileParsed;
 
   ar_close_archive(archive);
   ar_close(stream);
