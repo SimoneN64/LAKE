@@ -12,7 +12,7 @@ void LogicAnalyzer::OpenDialog() noexcept {
   auto result = NFD::OpenDialog(outpath, filters, 2);
   if (result == NFD_ERROR) {
     MakePopupError("An error occurred",
-                    fmt::format("Could not open {}. Error: {}\n", outpath, NFD::GetError()),
+                    fmt::format("Could not open \"{}\". Error: {}\n", outpath, NFD::GetError()),
                     FileOpenError);
     return;
   }
@@ -29,6 +29,42 @@ void LogicAnalyzer::MakePopupError(const std::string& title, const std::string& 
   popupHandler.ScheduleErrorPopup(title, msg);
 }
 
+template <int Size>
+static inline std::string ReadAsciiFromBuffer(const std::vector<uint8_t>& buffer, int index = 0) {
+  std::string result{};
+
+  for (int i = index; i < index + Size; i++) {
+    result.push_back(buffer[i]);
+  }
+
+  return result;
+}
+
+void LogicAnalyzer::ParseSaleae(const std::vector<ArchiveEntry> &files) {
+  auto digitalIndex = std::find_if(files.begin(), files.end(),
+                                   [](const ArchiveEntry &entry) { return entry.name.starts_with("digital"); });
+
+  if (digitalIndex == files.end()) {
+    MakePopupError("An error occurred",
+                   fmt::format("Could not parse \"{}\". No files seem to be the expected \"digital-X.bin\"\n", filePath.string()), ParseError);
+    return;
+  }
+  
+  auto identifier = ReadAsciiFromBuffer<8>(digitalIndex->fileBuffer);
+  if (identifier != "<SALEAE>") {
+    MakePopupError("An error occurred",
+                   fmt::format("Could not parse \"{}\". Incorrect header; <SALEAE> marker not present\n", filePath.string()), ParseError);
+  }
+
+  MakePopupError("An error occurred", fmt::format("Could not parse \"{}\". Error opening archive\n", filePath.string()),
+                 ParseError);
+}
+
+void LogicAnalyzer::ParseDSLogic(const std::vector<ArchiveEntry> &files) {
+  MakePopupError("An error occurred", fmt::format("Could not parse \"{}\". Error opening archive\n", filePath.string()),
+                 ParseError);
+}
+
 std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcept {
   std::vector<LineData> result{};
 
@@ -36,7 +72,7 @@ std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcep
 
   if (!stream) {
     MakePopupError("An error occurred",
-      fmt::format("Could not open {}. Error opening archive\n", filePath.string()),
+      fmt::format("Could not open \"{}\". Error opening archive\n", filePath.string()),
       FileOpenError);
     return {};
   }
@@ -53,15 +89,28 @@ std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcep
   if (!archive) {
     ar_close(stream);
     MakePopupError("An error occurred",
-      fmt::format("Could not open {}. Error unzipping file. Is this a valid Saleae or DSLogic project?\n", filePath.string()),
+      fmt::format("Could not open \"{}\". Error unzipping file. Is this a valid Saleae or DSLogic project?\n", filePath.string()),
       FileOpenError);
     return {};
   }
 
-  state = FileParsed;
+  std::vector<ArchiveEntry> files;
+  bool isSaleae = false;
+  // find "meta.json" -> isSaleae = true
+  while (ar_parse_entry(archive)) {
+    auto filename = std::string(ar_entry_get_name(archive));
+    isSaleae = filename == "meta.json";
+    std::vector<uint8_t> buffer;
+    buffer.resize(ar_entry_get_size(archive));
+    ar_entry_uncompress(archive, buffer.data(), buffer.size());
+    files.push_back({filename, buffer});
+  }
 
   ar_close_archive(archive);
   ar_close(stream);
+
+  isSaleae ? ParseSaleae(files) : ParseDSLogic(files);
+
   return result;
 }
 

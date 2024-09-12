@@ -90,7 +90,14 @@ struct LogicAnalyzer {
   std::thread parserThread{};
 
 private:
+  struct ArchiveEntry {
+    std::string name;
+    std::vector<uint8_t> fileBuffer;
+  };
+
   void MakePopupError(const std::string& title, const std::string& msg, State newState);
+  void ParseSaleae(const std::vector<ArchiveEntry> &files);
+  void ParseDSLogic(const std::vector<ArchiveEntry> &files);
 
   PopupHandler &popupHandler;
   std::ifstream file{};
