@@ -18,7 +18,7 @@
 static int SDLCALL keyboard_getKeyboardState(void *arg)
 {
     int numkeys;
-    const Uint8 *state;
+    const SDL_bool *state;
 
     /* Case where numkeys pointer is NULL */
     state = SDL_GetKeyboardState(NULL);
@@ -223,7 +223,7 @@ static int SDLCALL keyboard_getScancodeNameNegative(void *arg)
     SDLTest_AssertPass("Call to SDL_ClearError()");
 
     /* Out-of-bounds scancode */
-    scancode = (SDL_Scancode)SDL_NUM_SCANCODES;
+    scancode = (SDL_Scancode)SDL_SCANCODE_COUNT;
     result = SDL_GetScancodeName(scancode);
     SDLTest_AssertPass("Call to SDL_GetScancodeName(%d/large)", scancode);
     SDLTest_AssertCheck(result != NULL, "Verify result from call is not NULL");

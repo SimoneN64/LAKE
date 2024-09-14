@@ -1524,7 +1524,8 @@ JNIEXPORT void JNICALL SDL_JAVA_INTERFACE(nativeSetenv)(
     const char *utfname = (*env)->GetStringUTFChars(env, name, NULL);
     const char *utfvalue = (*env)->GetStringUTFChars(env, value, NULL);
 
-    SDL_setenv(utfname, utfvalue, 1);
+    // This is only called at startup, to initialize the environment
+    SDL_setenv_unsafe(utfname, utfvalue, 1);
 
     (*env)->ReleaseStringUTFChars(env, name, utfname);
     (*env)->ReleaseStringUTFChars(env, value, utfvalue);
@@ -2122,8 +2123,8 @@ bool Android_JNI_ShowMessageBox(const SDL_MessageBoxData *messageboxdata, int *b
     }
 
     if (messageboxdata->colorScheme) {
-        colors = (*env)->NewIntArray(env, SDL_MESSAGEBOX_COLOR_MAX);
-        for (i = 0; i < SDL_MESSAGEBOX_COLOR_MAX; ++i) {
+        colors = (*env)->NewIntArray(env, SDL_MESSAGEBOX_COLOR_COUNT);
+        for (i = 0; i < SDL_MESSAGEBOX_COLOR_COUNT; ++i) {
             temp = (0xFFU << 24) |
                    (messageboxdata->colorScheme->colors[i].r << 16) |
                    (messageboxdata->colorScheme->colors[i].g << 8) |

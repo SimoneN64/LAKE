@@ -360,6 +360,8 @@ The following functions have been removed:
 
 ## SDL_events.h
 
+SDL_PRESSED and SDL_RELEASED have been removed. For the most part you can replace uses of these with SDL_TRUE and SDL_FALSE respectively. Events which had a field `state` to represent these values have had those fields changed to SDL_bool `down`, e.g. `event.key.state` is now `event.key.down`.
+
 The timestamp member of the SDL_Event structure now represents nanoseconds, and is populated with SDL_GetTicksNS()
 
 The timestamp_us member of the sensor events has been renamed sensor_timestamp and now represents nanoseconds. This value is filled in from the hardware, if available, and may not be synchronized with values returned from SDL_GetTicksNS().
@@ -596,6 +598,8 @@ SDL_bool SDL_IsJoystickNVIDIASHIELDController(Uint16 vendor_id, Uint16 product_i
 
 The inputType and outputType fields of SDL_GamepadBinding have been renamed input_type and output_type.
 
+SDL_GetGamepadTouchpadFinger() takes a pointer to SDL_bool for the finger state instead of a pointer to Uint8.
+
 The following enums have been renamed:
 * SDL_GameControllerAxis => SDL_GamepadAxis
 * SDL_GameControllerBindType => SDL_GamepadBindingType
@@ -671,7 +675,7 @@ The following symbols have been renamed:
 * SDL_CONTROLLER_AXIS_INVALID => SDL_GAMEPAD_AXIS_INVALID
 * SDL_CONTROLLER_AXIS_LEFTX => SDL_GAMEPAD_AXIS_LEFTX
 * SDL_CONTROLLER_AXIS_LEFTY => SDL_GAMEPAD_AXIS_LEFTY
-* SDL_CONTROLLER_AXIS_MAX => SDL_GAMEPAD_AXIS_MAX
+* SDL_CONTROLLER_AXIS_MAX => SDL_GAMEPAD_AXIS_COUNT
 * SDL_CONTROLLER_AXIS_RIGHTX => SDL_GAMEPAD_AXIS_RIGHTX
 * SDL_CONTROLLER_AXIS_RIGHTY => SDL_GAMEPAD_AXIS_RIGHTY
 * SDL_CONTROLLER_AXIS_TRIGGERLEFT => SDL_GAMEPAD_AXIS_LEFT_TRIGGER
@@ -691,7 +695,7 @@ The following symbols have been renamed:
 * SDL_CONTROLLER_BUTTON_INVALID => SDL_GAMEPAD_BUTTON_INVALID
 * SDL_CONTROLLER_BUTTON_LEFTSHOULDER => SDL_GAMEPAD_BUTTON_LEFT_SHOULDER
 * SDL_CONTROLLER_BUTTON_LEFTSTICK => SDL_GAMEPAD_BUTTON_LEFT_STICK
-* SDL_CONTROLLER_BUTTON_MAX => SDL_GAMEPAD_BUTTON_MAX
+* SDL_CONTROLLER_BUTTON_MAX => SDL_GAMEPAD_BUTTON_COUNT
 * SDL_CONTROLLER_BUTTON_MISC1 => SDL_GAMEPAD_BUTTON_MISC1
 * SDL_CONTROLLER_BUTTON_PADDLE1 => SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1
 * SDL_CONTROLLER_BUTTON_PADDLE2 => SDL_GAMEPAD_BUTTON_LEFT_PADDLE1
@@ -1002,6 +1006,8 @@ The text input state hase been changed to be window-specific. SDL_StartTextInput
 
 SDL_GetDefaultKeyFromScancode(), SDL_GetKeyFromScancode(), and SDL_GetScancodeFromKey() take an SDL_Keymod parameter and use that to provide the correct result based on keyboard modifier state.
 
+SDL_GetKeyboardState() returns a pointer to SDL_bool instead of Uint8.
+
 The following functions have been renamed:
 * SDL_IsScreenKeyboardShown() => SDL_ScreenKeyboardShown()
 * SDL_IsTextInputActive() => SDL_TextInputActive()
@@ -1110,6 +1116,9 @@ The following functions have been renamed:
 * SDL_LogSetOutputFunction() => SDL_SetLogOutputFunction()
 * SDL_LogSetPriority() => SDL_SetLogPriority()
 
+The following symbols have been renamed:
+* SDL_NUM_LOG_PRIORITIES => SDL_LOG_PRIORITY_COUNT
+
 ## SDL_main.h
 
 SDL3 doesn't have a static libSDLmain to link against anymore.
@@ -1133,6 +1142,9 @@ The following functions have been removed:
 
 The buttonid field of SDL_MessageBoxButtonData has been renamed buttonID.
 
+The following symbols have been renamed:
+* SDL_MESSAGEBOX_COLOR_MAX => SDL_MESSAGEBOX_COLOR_COUNT
+
 ## SDL_metal.h
 
 SDL_Metal_GetDrawableSize() has been removed. SDL_GetWindowSizeInPixels() can be used in its place.
@@ -1153,6 +1165,7 @@ The following functions have been removed:
 * SDL_GetRelativeMouseMode() - replaced with SDL_GetWindowRelativeMouseMode()
 
 The following symbols have been renamed:
+* SDL_NUM_SYSTEM_CURSORS => SDL_SYSTEM_CURSOR_COUNT
 * SDL_SYSTEM_CURSOR_ARROW => SDL_SYSTEM_CURSOR_DEFAULT
 * SDL_SYSTEM_CURSOR_HAND => SDL_SYSTEM_CURSOR_POINTER
 * SDL_SYSTEM_CURSOR_IBEAM => SDL_SYSTEM_CURSOR_TEXT
@@ -1644,6 +1657,7 @@ The following symbols have been removed:
 * SDL_SCANCODE_APP2
 
 The following symbols have been renamed:
+* SDL_NUM_SCANCODES => SDL_SCANCODE_COUNT
 * SDL_SCANCODE_AUDIOFASTFORWARD => SDL_SCANCODE_MEDIA_FAST_FORWARD
 * SDL_SCANCODE_AUDIOMUTE => SDL_SCANCODE_MUTE
 * SDL_SCANCODE_AUDIONEXT => SDL_SCANCODE_MEDIA_NEXT_TRACK
@@ -1725,6 +1739,8 @@ SDL3 attempts to apply consistency to case-insensitive string functions. In SDL2
 - The ctype.h replacement SDL_is*() functions (SDL_isalpha, SDL_isdigit, etc) only work on low-ASCII characters and ignore user locale, assuming English. This makes these functions consistent in SDL3, but applications need to be careful to understand their limits.
 
 Please note that the case-folding technique used by SDL3 will not produce correct results for the "Turkish 'I'"; this one letter is a surprisingly hard problem in the Unicode world, and since these functions do not specify the human language in use, we have chosen to ignore this problem.
+
+SDL_strtoll(), SDL_strtoull(), SDL_lltoa(), and SDL_ulltoa() use long long values instead of 64-bit values, to match their C runtime counterparts.
 
 The following macros have been removed:
 * SDL_TABLESIZE() - use SDL_arraysize() instead

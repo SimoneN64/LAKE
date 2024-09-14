@@ -54,6 +54,7 @@
 #define SDL_BindAudioStream SDL_BindAudioStream_REAL
 #define SDL_BindAudioStreams SDL_BindAudioStreams_REAL
 #define SDL_BindGPUComputePipeline SDL_BindGPUComputePipeline_REAL
+#define SDL_BindGPUComputeSamplers SDL_BindGPUComputeSamplers_REAL
 #define SDL_BindGPUComputeStorageBuffers SDL_BindGPUComputeStorageBuffers_REAL
 #define SDL_BindGPUComputeStorageTextures SDL_BindGPUComputeStorageTextures_REAL
 #define SDL_BindGPUFragmentSamplers SDL_BindGPUFragmentSamplers_REAL
@@ -76,6 +77,7 @@
 #define SDL_BroadcastCondition SDL_BroadcastCondition_REAL
 #define SDL_CaptureMouse SDL_CaptureMouse_REAL
 #define SDL_ClaimWindowForGPUDevice SDL_ClaimWindowForGPUDevice_REAL
+#define SDL_CleanupEnvironment SDL_CleanupEnvironment_REAL
 #define SDL_CleanupTLS SDL_CleanupTLS_REAL
 #define SDL_ClearAudioStream SDL_ClearAudioStream_REAL
 #define SDL_ClearClipboardData SDL_ClearClipboardData_REAL
@@ -108,6 +110,7 @@
 #define SDL_CreateCondition SDL_CreateCondition_REAL
 #define SDL_CreateCursor SDL_CreateCursor_REAL
 #define SDL_CreateDirectory SDL_CreateDirectory_REAL
+#define SDL_CreateEnvironment SDL_CreateEnvironment_REAL
 #define SDL_CreateGPUBuffer SDL_CreateGPUBuffer_REAL
 #define SDL_CreateGPUComputePipeline SDL_CreateGPUComputePipeline_REAL
 #define SDL_CreateGPUDevice SDL_CreateGPUDevice_REAL
@@ -121,6 +124,8 @@
 #define SDL_CreateMutex SDL_CreateMutex_REAL
 #define SDL_CreatePalette SDL_CreatePalette_REAL
 #define SDL_CreatePopupWindow SDL_CreatePopupWindow_REAL
+#define SDL_CreateProcess SDL_CreateProcess_REAL
+#define SDL_CreateProcessWithProperties SDL_CreateProcessWithProperties_REAL
 #define SDL_CreateProperties SDL_CreateProperties_REAL
 #define SDL_CreateRWLock SDL_CreateRWLock_REAL
 #define SDL_CreateRenderer SDL_CreateRenderer_REAL
@@ -147,10 +152,12 @@
 #define SDL_DestroyAudioStream SDL_DestroyAudioStream_REAL
 #define SDL_DestroyCondition SDL_DestroyCondition_REAL
 #define SDL_DestroyCursor SDL_DestroyCursor_REAL
+#define SDL_DestroyEnvironment SDL_DestroyEnvironment_REAL
 #define SDL_DestroyGPUDevice SDL_DestroyGPUDevice_REAL
 #define SDL_DestroyHapticEffect SDL_DestroyHapticEffect_REAL
 #define SDL_DestroyMutex SDL_DestroyMutex_REAL
 #define SDL_DestroyPalette SDL_DestroyPalette_REAL
+#define SDL_DestroyProcess SDL_DestroyProcess_REAL
 #define SDL_DestroyProperties SDL_DestroyProperties_REAL
 #define SDL_DestroyRWLock SDL_DestroyRWLock_REAL
 #define SDL_DestroyRenderer SDL_DestroyRenderer_REAL
@@ -193,6 +200,7 @@
 #define SDL_FlushAudioStream SDL_FlushAudioStream_REAL
 #define SDL_FlushEvent SDL_FlushEvent_REAL
 #define SDL_FlushEvents SDL_FlushEvents_REAL
+#define SDL_FlushIO SDL_FlushIO_REAL
 #define SDL_FlushRenderer SDL_FlushRenderer_REAL
 #define SDL_GDKResumeGPU SDL_GDKResumeGPU_REAL
 #define SDL_GDKSuspendComplete SDL_GDKSuspendComplete_REAL
@@ -212,6 +220,8 @@
 #define SDL_GL_SetSwapInterval SDL_GL_SetSwapInterval_REAL
 #define SDL_GL_SwapWindow SDL_GL_SwapWindow_REAL
 #define SDL_GL_UnloadLibrary SDL_GL_UnloadLibrary_REAL
+#define SDL_GPUSupportsProperties SDL_GPUSupportsProperties_REAL
+#define SDL_GPUSupportsShaderFormats SDL_GPUSupportsShaderFormats_REAL
 #define SDL_GPUTextureFormatTexelBlockSize SDL_GPUTextureFormatTexelBlockSize_REAL
 #define SDL_GPUTextureSupportsFormat SDL_GPUTextureSupportsFormat_REAL
 #define SDL_GPUTextureSupportsSampleCount SDL_GPUTextureSupportsSampleCount_REAL
@@ -294,13 +304,18 @@
 #define SDL_GetDisplayProperties SDL_GetDisplayProperties_REAL
 #define SDL_GetDisplayUsableBounds SDL_GetDisplayUsableBounds_REAL
 #define SDL_GetDisplays SDL_GetDisplays_REAL
+#define SDL_GetEnvironment SDL_GetEnvironment_REAL
+#define SDL_GetEnvironmentVariable SDL_GetEnvironmentVariable_REAL
+#define SDL_GetEnvironmentVariables SDL_GetEnvironmentVariables_REAL
 #define SDL_GetError SDL_GetError_REAL
 #define SDL_GetEventFilter SDL_GetEventFilter_REAL
 #define SDL_GetFloatProperty SDL_GetFloatProperty_REAL
 #define SDL_GetFullscreenDisplayModes SDL_GetFullscreenDisplayModes_REAL
 #define SDL_GetGDKDefaultUser SDL_GetGDKDefaultUser_REAL
 #define SDL_GetGDKTaskQueue SDL_GetGDKTaskQueue_REAL
+#define SDL_GetGPUDeviceDriver SDL_GetGPUDeviceDriver_REAL
 #define SDL_GetGPUDriver SDL_GetGPUDriver_REAL
+#define SDL_GetGPUShaderFormats SDL_GetGPUShaderFormats_REAL
 #define SDL_GetGPUSwapchainTextureFormat SDL_GetGPUSwapchainTextureFormat_REAL
 #define SDL_GetGamepadAppleSFSymbolsNameForAxis SDL_GetGamepadAppleSFSymbolsNameForAxis_REAL
 #define SDL_GetGamepadAppleSFSymbolsNameForButton SDL_GetGamepadAppleSFSymbolsNameForButton_REAL
@@ -416,6 +431,7 @@
 #define SDL_GetNumAllocations SDL_GetNumAllocations_REAL
 #define SDL_GetNumAudioDrivers SDL_GetNumAudioDrivers_REAL
 #define SDL_GetNumCameraDrivers SDL_GetNumCameraDrivers_REAL
+#define SDL_GetNumGPUDrivers SDL_GetNumGPUDrivers_REAL
 #define SDL_GetNumGamepadTouchpadFingers SDL_GetNumGamepadTouchpadFingers_REAL
 #define SDL_GetNumGamepadTouchpads SDL_GetNumGamepadTouchpads_REAL
 #define SDL_GetNumHapticAxes SDL_GetNumHapticAxes_REAL
@@ -440,6 +456,7 @@
 #define SDL_GetPreferredLocales SDL_GetPreferredLocales_REAL
 #define SDL_GetPrimaryDisplay SDL_GetPrimaryDisplay_REAL
 #define SDL_GetPrimarySelectionText SDL_GetPrimarySelectionText_REAL
+#define SDL_GetProcessProperties SDL_GetProcessProperties_REAL
 #define SDL_GetPropertyType SDL_GetPropertyType_REAL
 #define SDL_GetRGB SDL_GetRGB_REAL
 #define SDL_GetRGBA SDL_GetRGBA_REAL
@@ -610,6 +627,7 @@
 #define SDL_IsTablet SDL_IsTablet_REAL
 #define SDL_JoystickConnected SDL_JoystickConnected_REAL
 #define SDL_JoystickEventsEnabled SDL_JoystickEventsEnabled_REAL
+#define SDL_KillProcess SDL_KillProcess_REAL
 #define SDL_LoadBMP SDL_LoadBMP_REAL
 #define SDL_LoadBMP_IO SDL_LoadBMP_IO_REAL
 #define SDL_LoadFile SDL_LoadFile_REAL
@@ -694,6 +712,7 @@
 #define SDL_QuitSubSystem SDL_QuitSubSystem_REAL
 #define SDL_RaiseWindow SDL_RaiseWindow_REAL
 #define SDL_ReadIO SDL_ReadIO_REAL
+#define SDL_ReadProcess SDL_ReadProcess_REAL
 #define SDL_ReadS16BE SDL_ReadS16BE_REAL
 #define SDL_ReadS16LE SDL_ReadS16LE_REAL
 #define SDL_ReadS32BE SDL_ReadS32BE_REAL
@@ -797,6 +816,7 @@
 #define SDL_SetClipboardData SDL_SetClipboardData_REAL
 #define SDL_SetClipboardText SDL_SetClipboardText_REAL
 #define SDL_SetCursor SDL_SetCursor_REAL
+#define SDL_SetEnvironmentVariable SDL_SetEnvironmentVariable_REAL
 #define SDL_SetError    SDL_SetError_REAL
 #define SDL_SetEventEnabled SDL_SetEventEnabled_REAL
 #define SDL_SetEventFilter SDL_SetEventFilter_REAL
@@ -945,6 +965,7 @@
 #define SDL_UnlockTexture SDL_UnlockTexture_REAL
 #define SDL_UnmapGPUTransferBuffer SDL_UnmapGPUTransferBuffer_REAL
 #define SDL_UnregisterApp SDL_UnregisterApp_REAL
+#define SDL_UnsetEnvironmentVariable SDL_UnsetEnvironmentVariable_REAL
 #define SDL_UpdateGamepads SDL_UpdateGamepads_REAL
 #define SDL_UpdateHapticEffect SDL_UpdateHapticEffect_REAL
 #define SDL_UpdateJoysticks SDL_UpdateJoysticks_REAL
@@ -969,6 +990,7 @@
 #define SDL_WaitEventTimeout SDL_WaitEventTimeout_REAL
 #define SDL_WaitForGPUFences SDL_WaitForGPUFences_REAL
 #define SDL_WaitForGPUIdle SDL_WaitForGPUIdle_REAL
+#define SDL_WaitProcess SDL_WaitProcess_REAL
 #define SDL_WaitSemaphore SDL_WaitSemaphore_REAL
 #define SDL_WaitSemaphoreTimeout SDL_WaitSemaphoreTimeout_REAL
 #define SDL_WaitThread SDL_WaitThread_REAL
@@ -979,6 +1001,7 @@
 #define SDL_WindowSupportsGPUPresentMode SDL_WindowSupportsGPUPresentMode_REAL
 #define SDL_WindowSupportsGPUSwapchainComposition SDL_WindowSupportsGPUSwapchainComposition_REAL
 #define SDL_WriteIO SDL_WriteIO_REAL
+#define SDL_WriteProcess SDL_WriteProcess_REAL
 #define SDL_WriteS16BE SDL_WriteS16BE_REAL
 #define SDL_WriteS16LE SDL_WriteS16LE_REAL
 #define SDL_WriteS32BE SDL_WriteS32BE_REAL
@@ -1030,7 +1053,7 @@
 #define SDL_fmod SDL_fmod_REAL
 #define SDL_fmodf SDL_fmodf_REAL
 #define SDL_free SDL_free_REAL
-#define SDL_getenv SDL_getenv_REAL
+#define SDL_getenv_unsafe SDL_getenv_unsafe_REAL
 #define SDL_hid_ble_scan SDL_hid_ble_scan_REAL
 #define SDL_hid_close SDL_hid_close_REAL
 #define SDL_hid_device_change_count SDL_hid_device_change_count_REAL
@@ -1105,7 +1128,7 @@
 #define SDL_roundf SDL_roundf_REAL
 #define SDL_scalbn SDL_scalbn_REAL
 #define SDL_scalbnf SDL_scalbnf_REAL
-#define SDL_setenv SDL_setenv_REAL
+#define SDL_setenv_unsafe SDL_setenv_unsafe_REAL
 #define SDL_sin SDL_sin_REAL
 #define SDL_sinf SDL_sinf_REAL
 #define SDL_snprintf    SDL_snprintf_REAL
@@ -1148,7 +1171,7 @@
 #define SDL_uitoa SDL_uitoa_REAL
 #define SDL_ulltoa SDL_ulltoa_REAL
 #define SDL_ultoa SDL_ultoa_REAL
-#define SDL_unsetenv SDL_unsetenv_REAL
+#define SDL_unsetenv_unsafe SDL_unsetenv_unsafe_REAL
 #define SDL_utf8strlcpy SDL_utf8strlcpy_REAL
 #define SDL_utf8strlen SDL_utf8strlen_REAL
 #define SDL_utf8strnlen SDL_utf8strnlen_REAL
