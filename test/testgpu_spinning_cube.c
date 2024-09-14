@@ -306,8 +306,7 @@ Render(SDL_Window *window, const int windownum)
     SDL_GPUCommandBuffer *cmd;
     SDL_GPURenderPass *pass;
     SDL_GPUBufferBinding vertex_binding;
-    SDL_GPUBlitRegion src_region;
-    SDL_GPUBlitRegion dst_region;
+    SDL_GPUBlitInfo blit_info;
 
     /* Acquire the swapchain texture */
 
@@ -370,7 +369,7 @@ Render(SDL_Window *window, const int windownum)
     color_target.texture = winstate->tex_msaa ? winstate->tex_msaa : swapchain;
 
     SDL_zero(depth_target);
-    depth_target.clear_value.depth = 1.0f;
+    depth_target.clear_depth = 1.0f;
     depth_target.load_op = SDL_GPU_LOADOP_CLEAR;
     depth_target.store_op = SDL_GPU_STOREOP_DONT_CARE;
     depth_target.texture = winstate->tex_depth;
@@ -393,15 +392,19 @@ Render(SDL_Window *window, const int windownum)
 
     /* Blit MSAA to swapchain, if needed */
     if (render_state.sample_count > SDL_GPU_SAMPLECOUNT_1) {
-        SDL_zero(src_region);
-        src_region.texture = winstate->tex_msaa;
-        src_region.w = drawablew;
-        src_region.h = drawableh;
+        SDL_zero(blit_info);
+        blit_info.source.texture = winstate->tex_msaa;
+        blit_info.source.w = drawablew;
+        blit_info.source.h = drawableh;
 
-        dst_region = src_region;
-        dst_region.texture = swapchain;
+        blit_info.destination.texture = swapchain;
+        blit_info.destination.w = drawablew;
+        blit_info.destination.h = drawableh;
 
-        SDL_BlitGPUTexture(cmd, &src_region, &dst_region, SDL_FLIP_NONE, SDL_GPU_FILTER_LINEAR, SDL_FALSE);
+        blit_info.load_op = SDL_GPU_LOADOP_DONT_CARE;
+        blit_info.filter = SDL_GPU_FILTER_LINEAR;
+
+        SDL_BlitGPUTexture(cmd, &blit_info);
     }
 
     /* Submit the command buffer! */
@@ -420,18 +423,18 @@ load_shader(SDL_bool is_vertex)
     createinfo.num_uniform_buffers = is_vertex ? 1 : 0;
     createinfo.props = 0;
 
-    SDL_GPUDriver backend = SDL_GetGPUDriver(gpu_device);
-    if (backend == SDL_GPU_DRIVER_D3D11) {
+    SDL_GPUShaderFormat format = SDL_GetGPUShaderFormats(gpu_device);
+    if (format & SDL_GPU_SHADERFORMAT_DXBC) {
         createinfo.format = SDL_GPU_SHADERFORMAT_DXBC;
         createinfo.code = is_vertex ? D3D11_CubeVert : D3D11_CubeFrag;
         createinfo.code_size = is_vertex ? SDL_arraysize(D3D11_CubeVert) : SDL_arraysize(D3D11_CubeFrag);
         createinfo.entrypoint = is_vertex ? "VSMain" : "PSMain";
-    } else if (backend == SDL_GPU_DRIVER_D3D12) {
+    } else if (format & SDL_GPU_SHADERFORMAT_DXIL) {
         createinfo.format = SDL_GPU_SHADERFORMAT_DXIL;
         createinfo.code = is_vertex ? D3D12_CubeVert : D3D12_CubeFrag;
         createinfo.code_size = is_vertex ? SDL_arraysize(D3D12_CubeVert) : SDL_arraysize(D3D12_CubeFrag);
         createinfo.entrypoint = is_vertex ? "VSMain" : "PSMain";
-    } else if (backend == SDL_GPU_DRIVER_METAL) {
+    } else if (format & SDL_GPU_SHADERFORMAT_METALLIB) {
         createinfo.format = SDL_GPU_SHADERFORMAT_METALLIB;
         createinfo.code = is_vertex ? cube_vert_metallib : cube_frag_metallib;
         createinfo.code_size = is_vertex ? cube_vert_metallib_len : cube_frag_metallib_len;
@@ -462,7 +465,7 @@ init_render_state(int msaa)
     SDL_GPUColorTargetDescription color_target_desc;
     Uint32 drawablew, drawableh;
     SDL_GPUVertexAttribute vertex_attributes[2];
-    SDL_GPUVertexBinding vertex_binding;
+    SDL_GPUVertexBufferDescription vertex_buffer_desc;
     SDL_GPUShader *vertex_shader;
     SDL_GPUShader *fragment_shader;
     int i;
@@ -542,52 +545,43 @@ init_render_state(int msaa)
     /* Set up the graphics pipeline */
 
     SDL_zero(pipelinedesc);
+    SDL_zero(color_target_desc);
 
     color_target_desc.format = SDL_GetGPUSwapchainTextureFormat(gpu_device, state->windows[0]);
-
-    color_target_desc.blend_state.enable_blend = 0;
-    color_target_desc.blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
-    color_target_desc.blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
-    color_target_desc.blend_state.color_write_mask = 0xF;
-    color_target_desc.blend_state.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
-    color_target_desc.blend_state.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ZERO;
-    color_target_desc.blend_state.src_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
-    color_target_desc.blend_state.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ZERO;
 
     pipelinedesc.target_info.num_color_targets = 1;
     pipelinedesc.target_info.color_target_descriptions = &color_target_desc;
     pipelinedesc.target_info.depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D16_UNORM;
     pipelinedesc.target_info.has_depth_stencil_target = SDL_TRUE;
 
-    pipelinedesc.depth_stencil_state.enable_depth_test = 1;
-    pipelinedesc.depth_stencil_state.enable_depth_write = 1;
+    pipelinedesc.depth_stencil_state.enable_depth_test = SDL_TRUE;
+    pipelinedesc.depth_stencil_state.enable_depth_write = SDL_TRUE;
     pipelinedesc.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
 
     pipelinedesc.multisample_state.sample_count = render_state.sample_count;
-    pipelinedesc.multisample_state.sample_mask = 0xF;
 
     pipelinedesc.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 
     pipelinedesc.vertex_shader = vertex_shader;
     pipelinedesc.fragment_shader = fragment_shader;
 
-    vertex_binding.index = 0;
-    vertex_binding.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-    vertex_binding.instance_step_rate = 0;
-    vertex_binding.pitch = sizeof(VertexData);
+    vertex_buffer_desc.slot = 0;
+    vertex_buffer_desc.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+    vertex_buffer_desc.instance_step_rate = 0;
+    vertex_buffer_desc.pitch = sizeof(VertexData);
 
-    vertex_attributes[0].binding_index = 0;
+    vertex_attributes[0].buffer_slot = 0;
     vertex_attributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
     vertex_attributes[0].location = 0;
     vertex_attributes[0].offset = 0;
 
-    vertex_attributes[1].binding_index = 0;
+    vertex_attributes[1].buffer_slot = 0;
     vertex_attributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
     vertex_attributes[1].location = 1;
     vertex_attributes[1].offset = sizeof(float) * 3;
 
-    pipelinedesc.vertex_input_state.num_vertex_bindings = 1;
-    pipelinedesc.vertex_input_state.vertex_bindings = &vertex_binding;
+    pipelinedesc.vertex_input_state.num_vertex_buffers = 1;
+    pipelinedesc.vertex_input_state.vertex_buffer_descriptions = &vertex_buffer_desc;
     pipelinedesc.vertex_input_state.num_vertex_attributes = 2;
     pipelinedesc.vertex_input_state.vertex_attributes = (SDL_GPUVertexAttribute*) &vertex_attributes;
 
@@ -625,7 +619,7 @@ init_render_state(int msaa)
 
 static int done = 0;
 
-void loop()
+void loop(void)
 {
     SDL_Event event;
     int i;

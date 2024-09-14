@@ -851,7 +851,7 @@ typedef SDL_ControllerTouchpadEvent, SDL_GamepadTouchpadEvent;
 @@
 @@
 - SDL_CONTROLLER_AXIS_MAX
-+ SDL_GAMEPAD_AXIS_MAX
++ SDL_GAMEPAD_AXIS_COUNT
 @@
 @@
 - SDL_CONTROLLER_AXIS_RIGHTX
@@ -931,7 +931,7 @@ typedef SDL_ControllerTouchpadEvent, SDL_GamepadTouchpadEvent;
 @@
 @@
 - SDL_CONTROLLER_BUTTON_MAX
-+ SDL_GAMEPAD_BUTTON_MAX
++ SDL_GAMEPAD_BUTTON_COUNT
 @@
 @@
 - SDL_CONTROLLER_BUTTON_MISC1
@@ -3614,6 +3614,14 @@ typedef SDL_JoystickGUID, SDL_GUID;
 - SDL_size_add_overflow
 + SDL_size_add_check_overflow
   (...)
+@@
+@@
+- SDL_PRESSED
++ SDL_TRUE
+@@
+@@
+- SDL_RELEASED
++ SDL_FALSE
 
 // This should be the last rule in the file, since it works on SDL3 functions and previous rules may have renamed old functions.
 @ bool_return_type  @
@@ -3643,3 +3651,19 @@ identifier func =~ "^(SDL_AddEventWatch|SDL_AddHintCallback|SDL_AddSurfaceAltern
   )
 - == -1
 )
+@@
+@@
+- SDL_NUM_LOG_PRIORITIES
++ SDL_LOG_PRIORITY_COUNT
+@@
+@@
+- SDL_MESSAGEBOX_COLOR_MAX
++ SDL_MESSAGEBOX_COLOR_COUNT
+@@
+@@
+- SDL_NUM_SYSTEM_CURSORS
++ SDL_SYSTEM_CURSOR_COUNT
+@@
+@@
+- SDL_NUM_SCANCODES
++ SDL_SCANCODE_COUNT

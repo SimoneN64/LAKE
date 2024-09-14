@@ -83,7 +83,7 @@ static bool get_zenity_version(int *major, int *minor)
         return SDL_SetError("pipe() failed: %s", strerror(errno));
     }
 
-    if (run_zenity(argv, fd_pipe) == 0) {
+    if (run_zenity(argv, fd_pipe)) {
         FILE *outputfp = NULL;
         char version_str[ZENITY_VERSION_LEN];
         char *version_ptr = NULL, *end_ptr = NULL;
@@ -141,8 +141,8 @@ bool Wayland_ShowMessageBox(const SDL_MessageBoxData *messageboxdata, int *butto
     };
 
     // Are we trying to connect to or are currently in a Wayland session?
-    if (!SDL_getenv("WAYLAND_DISPLAY")) {
-        const char *session = SDL_getenv("XDG_SESSION_TYPE");
+    if (!SDL_GetEnvironmentVariable(SDL_GetEnvironment(), "WAYLAND_DISPLAY")) {
+        const char *session = SDL_GetEnvironmentVariable(SDL_GetEnvironment(), "XDG_SESSION_TYPE");
         if (session && SDL_strcasecmp(session, "wayland") != 0) {
             return SDL_SetError("Not on a wayland display");
         }
