@@ -60,7 +60,7 @@ struct LogicAnalyzer {
   void OpenDialog() noexcept;
   auto &GetPath() const noexcept { return filePath; }
 
-  std::vector<LineData> ParseFile(std::ifstream &inputFile) noexcept;
+  std::vector<LineData> ParseFile() noexcept;
 
   void stopThread() {
     if (parserThread.joinable())
@@ -69,7 +69,7 @@ struct LogicAnalyzer {
 
   void startThread() {
     stopThread();
-    parserThread = std::thread([&]() { ParseFile(file); });
+    parserThread = std::thread([&]() { ParseFile(); });
   }
 
   CommunicationMode commMode = KSTDLUNGO;
@@ -90,16 +90,10 @@ struct LogicAnalyzer {
   std::thread parserThread{};
 
 private:
-  struct ArchiveEntry {
-    std::string name;
-    std::vector<uint8_t> fileBuffer;
-  };
-
-  void MakePopupError(const std::string& title, const std::string& msg, State newState);
-  void ParseSaleae(const std::vector<ArchiveEntry> &files);
-  void ParseDSLogic(const std::vector<ArchiveEntry> &files);
+  void MakePopupError(const std::string &title, const std::string &msg, State newState);
+  std::vector<LineData> ParseSaleae(const std::vector<uint8_t> &buffer);
+  std::vector<LineData> ParseDSLogic(const std::vector<uint8_t> &buffer);
 
   PopupHandler &popupHandler;
-  std::ifstream file{};
   fs::path filePath{};
 };

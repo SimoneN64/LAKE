@@ -3,14 +3,13 @@
 #include <LogicAnalyzer.hpp>
 #include <Popup.hpp>
 #include <algorithm>
-#include <unarr.h>
 
 void LogicAnalyzer::OpenDialog() noexcept {
   state = None;
 
   nfdchar_t *outpath;
-  constexpr nfdfilteritem_t filters[] = {{"Saleae project file", "sal"}, {"DSView project file", "dsl"}};
-  auto result = NFD::OpenDialog(outpath, filters, 2);
+  constexpr nfdfilteritem_t filters[] = {{"Saleae or DSLogic raw data file", "bin"}};
+  auto result = NFD::OpenDialog(outpath, filters, 1);
   if (result == NFD_ERROR) {
     MakePopupError("An error occurred", fmt::format("Could not open \"{}\". Error: {}\n", outpath, NFD::GetError()),
                    FileOpenError);
@@ -31,90 +30,71 @@ void LogicAnalyzer::MakePopupError(const std::string &title, const std::string &
 
 template <int Size>
 static inline std::string ReadAsciiFromBuffer(const std::vector<uint8_t> &buffer, int index = 0) {
-  std::string result{};
+  return {reinterpret_cast<const char *>(buffer.data() + index), Size};
+}
 
-  for (int i = index; i < index + Size; i++) {
-    result.push_back(buffer[i]);
+template <class T>
+static inline T ReadScalarFromBuffer(const std::vector<uint8_t> &buffer, int index = 0) {
+  if constexpr (std::is_same_v<T, uint64_t>) {
+    uint32_t high = *reinterpret_cast<const uint32_t *>(&buffer[index + 0]);
+    uint32_t low = *reinterpret_cast<const uint32_t *>(&buffer[index + 4]);
+
+    return ((T)high << 32) | (T)low;
   }
+
+  return *reinterpret_cast<const T *>(&buffer[index]);
+}
+
+std::vector<LineData> LogicAnalyzer::ParseSaleae(const std::vector<uint8_t> &buffer) {
+  auto identifier = ReadAsciiFromBuffer<8>(buffer);
+  if (identifier != "<SALEAE>") {
+    return {};
+  }
+
+  auto version = ReadScalarFromBuffer<uint32_t>(buffer, 8);
+  auto datatype = ReadScalarFromBuffer<uint32_t>(buffer, 12);
+
+  if (version != 0 && datatype != 0) {
+    return {};
+  }
+
+  std::vector<LineData> result{};
 
   return result;
 }
 
-void LogicAnalyzer::ParseSaleae(const std::vector<ArchiveEntry> &files) {
-  auto digitalIndex = std::find_if(files.begin(), files.end(),
-                                   [](const ArchiveEntry &entry) { return entry.name.starts_with("digital"); });
+std::vector<LineData> LogicAnalyzer::ParseDSLogic(const std::vector<uint8_t> &files) {
+  MakePopupError("An error occurred",
+                 fmt::format("Could not parse \"{}\". DSLogic not implemented!\n", filePath.string()), ParseError);
 
-  if (digitalIndex == files.end()) {
-    MakePopupError(
-      "An error occurred",
-      fmt::format("Could not parse \"{}\". No files seem to be the expected \"digital-X.bin\"\n", filePath.string()),
-      ParseError);
-    return;
-  }
-
-  auto identifier = ReadAsciiFromBuffer<8>(digitalIndex->fileBuffer);
-  if (identifier != "<SALEAE>") {
-    MakePopupError(
-      "An error occurred",
-      fmt::format("Could not parse \"{}\". Incorrect header; <SALEAE> marker not present\n", filePath.string()),
-      ParseError);
-  }
-
-  MakePopupError("An error occurred", fmt::format("Could not parse \"{}\". Error opening archive\n", filePath.string()),
-                 ParseError);
+  return {};
 }
 
-void LogicAnalyzer::ParseDSLogic(const std::vector<ArchiveEntry> &files) {
-  MakePopupError("An error occurred", fmt::format("Could not parse \"{}\". Error opening archive\n", filePath.string()),
-                 ParseError);
-}
+std::vector<LineData> LogicAnalyzer::ParseFile() noexcept {
+  auto file = std::ifstream(filePath, std::ios::binary);
 
-std::vector<LineData> LogicAnalyzer::ParseFile(std::ifstream &inputFile) noexcept {
-  std::vector<LineData> result{};
-
-  auto stream = ar_open_file(filePath.string().c_str());
-
-  if (!stream) {
-    MakePopupError("An error occurred",
-                   fmt::format("Could not open \"{}\". Error opening archive\n", filePath.string()), FileOpenError);
+  if (!file) {
+    MakePopupError("An error occurred", fmt::format("Could not open \"{}\". Error opening file\n", filePath.string()),
+                   FileOpenError);
     return {};
   }
 
-  ar_archive *archive = ar_open_zip_archive(stream, false);
+  std::vector<uint8_t> buffer{std::istreambuf_iterator{file}, {}};
 
-  if (!archive)
-    archive = ar_open_rar_archive(stream);
-  if (!archive)
-    archive = ar_open_7z_archive(stream);
-  if (!archive)
-    archive = ar_open_tar_archive(stream);
+  file.close();
 
-  if (!archive) {
-    ar_close(stream);
-    MakePopupError(
-      "An error occurred",
-      fmt::format("Could not open \"{}\". Error unzipping file. Is this a valid Saleae or DSLogic project?\n",
-                  filePath.string()),
-      FileOpenError);
-    return {};
+  auto result = ParseSaleae(buffer);
+  if (result.empty()) {
+    result = ParseDSLogic(buffer);
+    if (result.empty()) {
+      MakePopupError("An error occurred",
+                     fmt::format("Could not parse \"{}\". This is neither a Saleae nor a DSLogic raw data file\n",
+                                 filePath.string()),
+                     ParseError);
+
+      return {};
+    }
   }
-
-  std::vector<ArchiveEntry> files;
-  bool isSaleae = false;
-  // find "meta.json" -> isSaleae = true
-  while (ar_parse_entry(archive)) {
-    auto filename = std::string(ar_entry_get_name(archive));
-    isSaleae = filename == "meta.json";
-    std::vector<uint8_t> buffer;
-    buffer.resize(ar_entry_get_size(archive));
-    ar_entry_uncompress(archive, buffer.data(), buffer.size());
-    files.push_back({filename, buffer});
-  }
-
-  ar_close_archive(archive);
-  ar_close(stream);
-
-  isSaleae ? ParseSaleae(files) : ParseDSLogic(files);
 
   return result;
 }
