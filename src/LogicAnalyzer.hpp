@@ -37,21 +37,6 @@ struct AnalyzerSettings {
   bool signalInversion = false;
 };
 
-struct LineData {
-  void SetAbsTime(const std::string &line) { absTime = GetTime(line); }
-  void SetDeltaTime(const double &val) { deltaTime = val; }
-  void SetIdentifier(const std::string &line) { identifier = GetDataByte(line); }
-  void SetLen(const CommunicationMode &commMode, const std::string &line);
-  void SetCks(const std::string &line) { cks = GetDataByte(line); }
-
-  static double GetTime(const std::string &line);
-  static uint8_t GetDataByte(const std::string &line);
-
-  std::vector<uint8_t> bytes{};
-  double absTime{}, deltaTime{};
-  uint8_t identifier{}, len{}, cks{};
-};
-
 struct LogicAnalyzer {
   explicit LogicAnalyzer(PopupHandler &popupHandler) : popupHandler(popupHandler) {}
   ~LogicAnalyzer() { stopThread(); }
@@ -60,7 +45,7 @@ struct LogicAnalyzer {
   void OpenDialog() noexcept;
   auto &GetPath() const noexcept { return filePath; }
 
-  std::vector<LineData> ParseFile() noexcept;
+  std::vector<double> ParseFile() noexcept;
 
   void stopThread() {
     if (parserThread.joinable())
@@ -88,11 +73,14 @@ struct LogicAnalyzer {
   std::atomic<State> state = None;
   AnalyzerSettings settings{};
   std::thread parserThread{};
+  int initialState{};
+  double beginTime{}, endTime{};
+  uint64_t numTransitions{};
 
 private:
   void MakePopupError(const std::string &title, const std::string &msg, State newState);
-  std::vector<LineData> ParseSaleae(const std::vector<uint8_t> &buffer);
-  std::vector<LineData> ParseDSLogic(const std::vector<uint8_t> &buffer);
+  std::vector<double> ParseSaleae(const std::vector<uint8_t> &buffer);
+  std::vector<double> ParseDSLogic(const std::vector<uint8_t> &buffer);
 
   PopupHandler &popupHandler;
   fs::path filePath{};

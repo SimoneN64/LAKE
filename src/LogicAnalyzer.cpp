@@ -45,32 +45,51 @@ static inline T ReadScalarFromBuffer(const std::vector<uint8_t> &buffer, int ind
   return *reinterpret_cast<const T *>(&buffer[index]);
 }
 
-std::vector<LineData> LogicAnalyzer::ParseSaleae(const std::vector<uint8_t> &buffer) {
+std::vector<double> LogicAnalyzer::ParseSaleae(const std::vector<uint8_t> &buffer) {
+  auto index = 0;
   auto identifier = ReadAsciiFromBuffer<8>(buffer);
   if (identifier != "<SALEAE>") {
     return {};
   }
 
-  auto version = ReadScalarFromBuffer<uint32_t>(buffer, 8);
-  auto datatype = ReadScalarFromBuffer<uint32_t>(buffer, 12);
+  index += 8;
+
+  auto version = ReadScalarFromBuffer<uint32_t>(buffer, index);
+  index += sizeof(uint32_t);
+  auto datatype = ReadScalarFromBuffer<uint32_t>(buffer, index);
+  index += sizeof(uint32_t);
 
   if (version != 0 && datatype != 0) {
     return {};
   }
 
-  std::vector<LineData> result{};
+  initialState = ReadScalarFromBuffer<int>(buffer, index);
+  index += sizeof(int);
+  beginTime = ReadScalarFromBuffer<double>(buffer, index);
+  index += sizeof(double);
+  endTime = ReadScalarFromBuffer<double>(buffer, index);
+  index += sizeof(double);
+  numTransitions = ReadScalarFromBuffer<uint64_t>(buffer, index);
+  index += sizeof(uint64_t);
+
+  std::vector<double> result{};
+  result.resize(buffer.size() - index);
+
+  for (int i = index; i < buffer.size(); i += sizeof(double)) {
+    result[i - index] = ReadScalarFromBuffer<double>(buffer, i);
+  }
 
   return result;
 }
 
-std::vector<LineData> LogicAnalyzer::ParseDSLogic(const std::vector<uint8_t> &files) {
+std::vector<double> LogicAnalyzer::ParseDSLogic(const std::vector<uint8_t> &files) {
   MakePopupError("An error occurred",
                  fmt::format("Could not parse \"{}\". DSLogic not implemented!\n", filePath.string()), ParseError);
 
   return {};
 }
 
-std::vector<LineData> LogicAnalyzer::ParseFile() noexcept {
+std::vector<double> LogicAnalyzer::ParseFile() noexcept {
   auto file = std::ifstream(filePath, std::ios::binary);
 
   if (!file) {
@@ -95,6 +114,8 @@ std::vector<LineData> LogicAnalyzer::ParseFile() noexcept {
       return {};
     }
   }
+
+  state = FileParsed;
 
   return result;
 }
